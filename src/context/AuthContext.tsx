@@ -34,6 +34,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            const publicPaths = ['/', '/login', '/register'];
+            const isPublicPath = publicPaths.some(p => p === pathname) || pathname.startsWith('/services') || pathname.startsWith('/jobs');
+
             if (firebaseUser) {
                 setUser(firebaseUser);
                 const profileDocRef = doc(db, "profiles", firebaseUser.uid);
@@ -41,25 +44,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 if (profileDoc.exists()) {
                     setProfile(profileDoc.data() as Profile);
                 } else {
-                    // If profile doesn't exist (e.g. social sign-in), create a basic one
                     const newProfile: Profile = {
                         id: firebaseUser.uid,
                         fullName: firebaseUser.displayName || 'New User',
                         email: firebaseUser.email || '',
-                        isSeller: false,
+isSeller: false,
                         rating: 0,
                         reviewsCount: 0,
                     };
                     await setDoc(profileDocRef, newProfile);
                     setProfile(newProfile);
                 }
+                
+                // If user is logged in and tries to go to login/register, redirect to dashboard
+                if (pathname === '/login' || pathname === '/register') {
+                    router.push('/dashboard');
+                }
+
             } else {
                 setUser(null);
                 setProfile(null);
                  // Redirect to login if not authenticated and not on a public page
-                const publicPaths = ['/', '/login', '/register', '/services', '/jobs'];
-                const isPublicPath = publicPaths.some(path => pathname.startsWith(path) && path.length === pathname.length) || pathname.startsWith('/services/') || pathname.startsWith('/jobs/');
-
                 if (!isPublicPath) {
                     router.push('/login');
                 }
