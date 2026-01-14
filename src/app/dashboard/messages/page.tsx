@@ -72,7 +72,7 @@ export default function MessagesPage() {
     return (
         <div className="flex flex-col h-full">
             <div className="flex-grow flex min-h-0">
-                <aside className="w-1/3 border-r flex flex-col">
+                <aside className="w-[350px] border-r flex flex-col">
                     <div className="p-4 border-b">
                         <h2 className="text-xl font-bold">Chats</h2>
                     </div>
@@ -90,16 +90,16 @@ export default function MessagesPage() {
                                 <AvatarImage src={convo.avatar} />
                                 <AvatarFallback>{convo.name.charAt(0)}</AvatarFallback>
                             </Avatar>
-                            <div className="flex-1">
-                                <p className="font-semibold">{convo.name}</p>
+                            <div className="flex-1 overflow-hidden">
+                                <p className="font-semibold truncate">{convo.name}</p>
                                 <p className="text-sm text-muted-foreground truncate">{convo.lastMessage}</p>
                             </div>
-                            {convo.unread && <div className="bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">{convo.unread}</div>}
+                            {convo.unread && <div className="bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center shrink-0">{convo.unread}</div>}
                         </div>
                     ))}
                     </ScrollArea>
                 </aside>
-                <main className="w-2/3 flex flex-col">
+                <main className="flex-1 flex flex-col">
                     {selectedConversation ? (
                         <>
                             <div className="p-4 border-b flex items-center gap-4">
