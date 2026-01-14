@@ -37,6 +37,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { usePathname } from 'next/navigation';
 
 export default function DashboardLayout({
   children,
@@ -44,6 +45,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { user, profile, logout } = useAuth();
+  const pathname = usePathname();
 
   return (
     <SidebarProvider>
@@ -57,7 +59,7 @@ export default function DashboardLayout({
           <SidebarMenu>
             <SidebarMenuItem>
               <Link href="/dashboard">
-                <SidebarMenuButton tooltip="Dashboard" isActive>
+                <SidebarMenuButton tooltip="Dashboard" isActive={pathname === '/dashboard'}>
                   <LayoutGrid />
                   Dashboard
                 </SidebarMenuButton>
@@ -66,7 +68,7 @@ export default function DashboardLayout({
             {profile?.isSeller && (
               <SidebarMenuItem>
                 <Link href="/dashboard/services">
-                  <SidebarMenuButton tooltip="My Services">
+                  <SidebarMenuButton tooltip="My Services" isActive={pathname.startsWith('/dashboard/services')}>
                     <Briefcase />
                     My Services
                   </SidebarMenuButton>
@@ -75,7 +77,7 @@ export default function DashboardLayout({
             )}
             <SidebarMenuItem>
               <Link href="/dashboard/jobs">
-                <SidebarMenuButton tooltip="Find Jobs">
+                <SidebarMenuButton tooltip="Find Jobs" isActive={pathname.startsWith('/dashboard/jobs')}>
                   <Briefcase />
                   Find Jobs
                 </SidebarMenuButton>
@@ -83,7 +85,7 @@ export default function DashboardLayout({
             </SidebarMenuItem>
             <SidebarMenuItem>
               <Link href="/dashboard/messages">
-                <SidebarMenuButton tooltip="Messages">
+                <SidebarMenuButton tooltip="Messages" isActive={pathname === '/dashboard/messages'}>
                   <Mail />
                   Messages
                 </SidebarMenuButton>
@@ -91,7 +93,7 @@ export default function DashboardLayout({
             </SidebarMenuItem>
             <SidebarMenuItem>
               <Link href="/dashboard/wallet">
-                <SidebarMenuButton tooltip="Wallet">
+                <SidebarMenuButton tooltip="Wallet" isActive={pathname === '/dashboard/wallet'}>
                   <Wallet />
                   Wallet
                 </SidebarMenuButton>
@@ -103,7 +105,7 @@ export default function DashboardLayout({
           <SidebarMenu>
             <SidebarMenuItem>
               <Link href="/dashboard/profile">
-                <SidebarMenuButton tooltip="Edit Profile">
+                <SidebarMenuButton tooltip="Edit Profile" isActive={pathname === '/dashboard/profile'}>
                   <User />
                   Edit Profile
                 </SidebarMenuButton>
