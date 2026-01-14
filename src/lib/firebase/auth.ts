@@ -14,6 +14,10 @@ import { app } from "./config";
 const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+    'auth_domain': 'studio-1916341789-a2802.firebaseapp.com'
+});
+
 
 export async function register(email: string, password: string, fullName: string, isSeller: boolean) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
