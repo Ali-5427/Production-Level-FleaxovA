@@ -23,8 +23,8 @@ export default function ServicesPage() {
       rating: 4.9,
       reviews: 120,
       price: 50,
-      image: getImage("logo design").imageUrl,
-      imageHint: getImage("logo design").imageHint,
+      image: "https://storage.googleapis.com/aifirebase/scenarios/fleaxova/A_black_monogram_logo_that_creatively_combines_the_letters_A_and_X_in_a_minimalist_style._The_logo_is_embossed_on_a_textured_white_paper_background_with_the_text_AURORA_DESIGNS_underneath._The_lighting_is_soft_and_natural_creating_a_professional_and_elegant_feel._.jpeg",
+      imageHint: "logo design",
     },
     {
       id: "2",
@@ -63,7 +63,7 @@ export default function ServicesPage() {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Service Marketplace</h1>
         <Button asChild>
-            <Link href={user ? "/services/create" : "/login"}>
+            <Link href={user ? "/services/create" : "/register"}>
                 <PlusCircle className="mr-2" />
                 Create Service
             </Link>

@@ -37,7 +37,7 @@ export default function JobsPage() {
         <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold">Job Board</h1>
             <Button asChild>
-                <Link href={user ? "/jobs/create" : "/login"}>
+                <Link href={user ? "/jobs/create" : "/register"}>
                     <PlusCircle className="mr-2" />
                     Post a Job
                 </Link>
