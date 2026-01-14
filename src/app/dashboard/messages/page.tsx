@@ -72,7 +72,7 @@ export default function MessagesPage() {
     return (
         <div className="flex flex-col h-full">
             <div className="flex-grow flex min-h-0">
-                <aside className="w-[350px] border-r flex flex-col">
+                <aside className="w-[400px] border-r flex flex-col">
                     <div className="p-4 border-b">
                         <h2 className="text-xl font-bold">Chats</h2>
                     </div>
