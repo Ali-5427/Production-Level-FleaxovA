@@ -51,7 +51,7 @@ export default function DashboardLayout({
           <SidebarMenu>
             <SidebarMenuItem>
               <Link href="/dashboard" legacyBehavior passHref>
-                <SidebarMenuButton tooltip="Dashboard" isActive>
+                <SidebarMenuButton tooltip="Dashboard">
                   <LayoutGrid />
                   Dashboard
                 </SidebarMenuButton>
@@ -59,7 +59,7 @@ export default function DashboardLayout({
             </SidebarMenuItem>
             <SidebarMenuItem>
               <Link href="/services" legacyBehavior passHref>
-                <SidebarMenuButton tooltip="Services">
+                <SidebarMenuButton tooltip="Services" isActive>
                   <Briefcase />
                   Services
                 </SidebarMenuButton>
