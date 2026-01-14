@@ -1,0 +1,97 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isProfileOwner(docId) {
+      return isOwner(docId);
+    }
+    
+    function isNewProfileOwner() {
+      return isOwner(request.resource.data.id);
+    }
+
+    // profiles: Can view all, update own only
+    match /profiles/{userId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isNewProfileOwner();
+      allow update: if isSignedIn() && isProfileOwner(userId);
+      allow delete: if false;
+    }
+
+    // services: Can view all, CRUD own only, minimum price ₹100
+    match /services/{serviceId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.sellerId == request.auth.uid && request.resource.data.price >= 100;
+      allow update, delete: if isSignedIn() && resource.data.sellerId == request.auth.uid;
+    }
+
+    // jobs: Can view all, CRUD own only
+    match /jobs/{jobId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.clientId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.clientId == request.auth.uid;
+    }
+
+    // applications: Students view own, clients view their job apps
+    match /applications/{applicationId} {
+      function isJobClient() {
+        let job = get(/databases/$(database)/documents/jobs/$(resource.data.jobId)).data;
+        return job.clientId == request.auth.uid;
+      }
+      allow read: if isSignedIn() && (isOwner(resource.data.freelancerId) || isJobClient());
+      allow create: if isSignedIn() && isOwner(request.resource.data.freelancerId);
+      allow update: if isSignedIn() && (isOwner(resource.data.freelancerId) || isJobClient());
+      allow delete: if isSignedIn() && isOwner(resource.data.freelancerId);
+    }
+
+    // orders: Client and freelancer view their own
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (isOwner(resource.data.buyerId) || isOwner(resource.data.sellerId));
+      allow create: if isSignedIn() && isOwner(request.resource.data.buyerId);
+      allow update: if isSignedIn() && (isOwner(resource.data.buyerId) || isOwner(resource.data.sellerId));
+      allow delete: if false;
+    }
+
+    // reviews: All view, only order client can create
+    match /reviews/{reviewId} {
+      function isOrderBuyer() {
+        if (!('orderId' in request.resource.data)) {
+          return false;
+        }
+        let order = get(/databases/$(database)/documents/orders/$(request.resource.data.orderId)).data;
+        return order.buyerId == request.auth.uid && order.status == 'completed';
+      }
+      allow read: if true;
+      allow create: if isSignedIn() && isOrderBuyer() && isOwner(request.resource.data.reviewerId);
+      allow update, delete: if false;
+    }
+
+    // messages: Sender/receiver view their messages only
+    match /messages/{messageId} {
+      allow read, create: if isSignedIn() && (isOwner(resource.data.senderId) || isOwner(resource.data.receiverId));
+      allow update, delete: if isSignedIn() && isOwner(resource.data.senderId);
+    }
+
+    // notifications: Users view own only
+    match /notifications/{notificationId} {
+      allow read, update, delete: if isSignedIn() && isOwner(resource.data.userId);
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
+    }
+
+    // withdrawals: Users view own only. (Admin role not implemented yet, so only user access)
+    match /withdrawals/{withdrawalId} {
+      allow read, create: if isSignedIn() && isOwner(resource.data.userId);
+      allow update, delete: if false; // Only admins or system should change status
+    }
+  }
+}
