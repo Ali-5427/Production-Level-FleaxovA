@@ -52,13 +52,14 @@ export default function RegisterPage() {
     };
     
     const handleGoogleSignUp = async () => {
-        setIsLoading(true);
         try {
+            // The popup must be initiated immediately after the user action.
             await registerWithGoogle(role === 'freelancer');
+            setIsLoading(true); // Set loading state after initiating the popup.
         } catch (error) {
-            // Error is already toasted in context
-        } finally {
-            setIsLoading(false);
+            // Error is already toasted in context, no need to set loading to false here
+            // as the page will redirect on success anyway.
+            console.error("Google Sign-Up failed", error);
         }
     };
 
