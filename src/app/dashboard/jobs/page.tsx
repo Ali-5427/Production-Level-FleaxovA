@@ -47,7 +47,7 @@ export default function JobsPage() {
             {jobs.map(job => (
                 <Card key={job.id}>
                     <CardHeader>
-                        <Link href={`/jobs/${job.id}`}>
+                        <Link href={`/dashboard/jobs/${job.id}`}>
                             <CardTitle className="hover:text-primary transition-colors">{job.title}</CardTitle>
                         </Link>
                         <CardDescription>Budget: ${job.budget}</CardDescription>
@@ -60,7 +60,7 @@ export default function JobsPage() {
                             {job.skills.map(skill => <Badge key={skill} variant="secondary">{skill}</Badge>)}
                         </div>
                         <Button variant="outline" asChild>
-                            <Link href={`/jobs/${job.id}`}>View Details</Link>
+                            <Link href={`/dashboard/jobs/${job.id}`}>View Details</Link>
                         </Button>
                     </CardFooter>
                 </Card>

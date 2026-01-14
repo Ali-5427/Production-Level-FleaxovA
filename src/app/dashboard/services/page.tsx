@@ -73,7 +73,7 @@ export default function ServicesPage() {
         {services.map((service) => (
           <Card key={service.id}>
             <CardHeader className="p-0">
-                <Link href={`/services/${service.id}`}>
+                <Link href={`/dashboard/services/${service.id}`}>
                     <Image 
                       src={service.image} 
                       alt={service.title} 
@@ -85,7 +85,7 @@ export default function ServicesPage() {
                 </Link>
             </CardHeader>
             <CardContent className="p-4">
-              <Link href={`/services/${service.id}`}>
+              <Link href={`/dashboard/services/${service.id}`}>
                 <CardTitle className="text-lg font-semibold hover:text-primary transition-colors">{service.title}</CardTitle>
               </Link>
               <p className="text-sm text-muted-foreground mt-1">by {service.author}</p>

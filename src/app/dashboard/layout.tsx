@@ -50,7 +50,7 @@ export default function DashboardLayout({
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
-            <Link href="/" className="text-xl font-bold text-primary">Fleaxova</Link>
+            <Link href="/dashboard" className="text-xl font-bold text-primary">Fleaxova</Link>
           </div>
         </SidebarHeader>
         <SidebarContent>
@@ -65,7 +65,7 @@ export default function DashboardLayout({
             </SidebarMenuItem>
             {profile?.isSeller && (
               <SidebarMenuItem>
-                <Link href="/services">
+                <Link href="/dashboard/services">
                   <SidebarMenuButton tooltip="My Services">
                     <Briefcase />
                     My Services
@@ -74,7 +74,7 @@ export default function DashboardLayout({
               </SidebarMenuItem>
             )}
             <SidebarMenuItem>
-              <Link href="/jobs">
+              <Link href="/dashboard/jobs">
                 <SidebarMenuButton tooltip="Find Jobs">
                   <Briefcase />
                   Find Jobs
@@ -82,7 +82,7 @@ export default function DashboardLayout({
               </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <Link href="/messages">
+              <Link href="/dashboard/messages">
                 <SidebarMenuButton tooltip="Messages">
                   <Mail />
                   Messages
@@ -90,7 +90,7 @@ export default function DashboardLayout({
               </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <Link href="/wallet">
+              <Link href="/dashboard/wallet">
                 <SidebarMenuButton tooltip="Wallet">
                   <Wallet />
                   Wallet
@@ -102,7 +102,7 @@ export default function DashboardLayout({
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <Link href="/profile">
+              <Link href="/dashboard/profile">
                 <SidebarMenuButton tooltip="Edit Profile">
                   <User />
                   Edit Profile
@@ -154,7 +154,7 @@ export default function DashboardLayout({
                   <Link href="/dashboard">Dashboard</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/profile">Profile</Link>
+                  <Link href="/dashboard/profile">Profile</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>

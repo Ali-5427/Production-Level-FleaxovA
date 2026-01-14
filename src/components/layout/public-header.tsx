@@ -112,7 +112,7 @@ export function PublicHeader() {
                     <Link href="/dashboard">Dashboard</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/profile">Profile</Link>
+                    <Link href="/dashboard/profile">Profile</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
@@ -154,7 +154,7 @@ export function PublicHeader() {
                         <Link href="/dashboard" className="font-medium">Dashboard</Link>
                       </SheetClose>
                        <SheetClose asChild>
-                        <Link href="/profile" className="font-medium">Profile</Link>
+                        <Link href="/dashboard/profile" className="font-medium">Profile</Link>
                       </SheetClose>
                       <SheetClose asChild>
                         <button onClick={() => { logout(); }} className="text-left font-medium">
