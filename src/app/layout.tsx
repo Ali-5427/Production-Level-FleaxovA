@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/context/AuthContext';
 import { PublicHeader } from '@/components/layout/public-header';
 import { usePathname } from 'next/navigation';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const metadata: Metadata = {
   title: 'Fleaxova Manager',
@@ -36,6 +37,7 @@ export default function RootLayout({
           </div>
         </AuthProvider>
         <Toaster />
+        <SpeedInsights />
       </body>
     </html>
   );
