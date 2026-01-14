@@ -3,10 +3,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/hooks/use-auth";
 import { PlusCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function JobsPage() {
+  const { user } = useAuth();
   const jobs = [
     {
       id: '1',
@@ -35,7 +37,7 @@ export default function JobsPage() {
         <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold">Job Board</h1>
             <Button asChild>
-                <Link href="/jobs/create">
+                <Link href={user ? "/jobs/create" : "/login"}>
                     <PlusCircle className="mr-2" />
                     Post a Job
                 </Link>

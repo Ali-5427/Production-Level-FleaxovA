@@ -3,12 +3,14 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/hooks/use-auth";
 import { PlusCircle, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function ServicesPage() {
+  const { user } = useAuth();
   const getImage = (hint: string) => {
     return PlaceHolderImages.find(img => img.imageHint === hint) || { imageUrl: "https://picsum.photos/seed/placeholder/600/400", imageHint: "placeholder" };
   }
@@ -61,7 +63,7 @@ export default function ServicesPage() {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Service Marketplace</h1>
         <Button asChild>
-            <Link href="/services/create">
+            <Link href={user ? "/services/create" : "/login"}>
                 <PlusCircle className="mr-2" />
                 Create Service
             </Link>
