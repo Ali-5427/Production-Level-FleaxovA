@@ -56,7 +56,7 @@ export default function DashboardLayout({
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <Link href="/dashboard" legacyBehavior passHref>
+              <Link href="/dashboard">
                 <SidebarMenuButton tooltip="Dashboard" isActive>
                   <LayoutGrid />
                   Dashboard
@@ -65,7 +65,7 @@ export default function DashboardLayout({
             </SidebarMenuItem>
             {profile?.isSeller && (
               <SidebarMenuItem>
-                <Link href="/services" legacyBehavior passHref>
+                <Link href="/services">
                   <SidebarMenuButton tooltip="My Services">
                     <Briefcase />
                     My Services
@@ -74,7 +74,7 @@ export default function DashboardLayout({
               </SidebarMenuItem>
             )}
             <SidebarMenuItem>
-              <Link href="/jobs" legacyBehavior passHref>
+              <Link href="/jobs">
                 <SidebarMenuButton tooltip="Find Jobs">
                   <Briefcase />
                   Find Jobs
@@ -82,7 +82,7 @@ export default function DashboardLayout({
               </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <Link href="/messages" legacyBehavior passHref>
+              <Link href="/messages">
                 <SidebarMenuButton tooltip="Messages">
                   <Mail />
                   Messages
@@ -90,7 +90,7 @@ export default function DashboardLayout({
               </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <Link href="/wallet" legacyBehavior passHref>
+              <Link href="/wallet">
                 <SidebarMenuButton tooltip="Wallet">
                   <Wallet />
                   Wallet
@@ -102,7 +102,7 @@ export default function DashboardLayout({
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <Link href="/profile" legacyBehavior passHref>
+              <Link href="/profile">
                 <SidebarMenuButton tooltip="Edit Profile">
                   <User />
                   Edit Profile

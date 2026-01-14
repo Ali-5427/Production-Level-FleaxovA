@@ -24,23 +24,25 @@ export default function Home() {
     <div className="bg-background text-foreground">
       {/* Header */}
       <header className="container mx-auto flex h-20 items-center justify-between px-4 md:px-6">
-        <Link href="/" legacyBehavior passHref>
-          <a className="text-2xl font-bold text-primary">Fleaxova</a>
+        <Link href="/" className="text-2xl font-bold text-primary">
+          Fleaxova
         </Link>
         <nav className="hidden items-center gap-6 md:flex">
-          <Link href="/services" legacyBehavior passHref>
-            <a className="text-sm font-medium hover:text-primary">
-              Find Talent
-            </a>
+          <Link
+            href="/services"
+            className="text-sm font-medium hover:text-primary"
+          >
+            Find Talent
           </Link>
-          <Link href="/jobs" legacyBehavior passHref>
-            <a className="text-sm font-medium hover:text-primary">
-              Find Work
-            </a>
+          <Link
+            href="/jobs"
+            className="text-sm font-medium hover:text-primary"
+          >
+            Find Work
           </Link>
-          <a href="#" className="text-sm font-medium hover:text-primary">
+          <Link href="#" className="text-sm font-medium hover:text-primary">
             Why Fleaxova
-          </a>
+          </Link>
         </nav>
         <div className="flex items-center gap-4">
           {user ? (
@@ -180,12 +182,12 @@ export default function Home() {
             &copy; {new Date().getFullYear()} Fleaxova. All rights reserved.
           </p>
           <div className="flex gap-6">
-            <a href="#" className="text-sm hover:text-primary">
+            <Link href="#" className="text-sm hover:text-primary">
               Terms of Service
-            </a>
-            <a href="#" className="text-sm hover:text-primary">
+            </Link>
+            <Link href="#" className="text-sm hover:text-primary">
               Privacy Policy
-            </a>
+            </Link>
           </div>
         </div>
       </footer>

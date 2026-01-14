@@ -1,3 +1,4 @@
+
 "use client"
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,12 +34,12 @@ export default function JobsPage() {
     <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold">Job Board</h1>
-            <Link href="/jobs/create">
-                <Button>
+            <Button asChild>
+                <Link href="/jobs/create">
                     <PlusCircle className="mr-2" />
                     Post a Job
-                </Button>
-            </Link>
+                </Link>
+            </Button>
         </div>
         <div className="space-y-6">
             {jobs.map(job => (
@@ -56,9 +57,9 @@ export default function JobsPage() {
                         <div className="flex gap-2 flex-wrap">
                             {job.skills.map(skill => <Badge key={skill} variant="secondary">{skill}</Badge>)}
                         </div>
-                        <Link href={`/jobs/${job.id}`}>
-                            <Button variant="outline">View Details</Button>
-                        </Link>
+                        <Button variant="outline" asChild>
+                            <Link href={`/jobs/${job.id}`}>View Details</Link>
+                        </Button>
                     </CardFooter>
                 </Card>
             ))}
