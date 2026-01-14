@@ -60,10 +60,10 @@ export default function DashboardLayout({
             <SidebarMenuItem>
               <Link href="/dashboard" passHref>
                 <SidebarMenuButton asChild tooltip="Dashboard" isActive={pathname === '/dashboard'}>
-                  <a>
+                  <>
                     <LayoutGrid />
                     Dashboard
-                  </a>
+                  </>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
@@ -71,10 +71,10 @@ export default function DashboardLayout({
               <SidebarMenuItem>
                 <Link href="/dashboard/services" passHref>
                   <SidebarMenuButton asChild tooltip="My Services" isActive={pathname.startsWith('/dashboard/services')}>
-                    <a>
+                    <>
                       <Briefcase />
                       My Services
-                    </a>
+                    </>
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
@@ -82,30 +82,30 @@ export default function DashboardLayout({
             <SidebarMenuItem>
               <Link href="/dashboard/jobs" passHref>
                 <SidebarMenuButton asChild tooltip="Find Jobs" isActive={pathname.startsWith('/dashboard/jobs')}>
-                  <a>
+                  <>
                     <Briefcase />
                     Find Jobs
-                  </a>
+                  </>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <Link href="/dashboard/messages" passHref>
                 <SidebarMenuButton asChild tooltip="Messages" isActive={pathname === '/dashboard/messages'}>
-                  <a>
+                  <>
                     <Mail />
                     Messages
-                  </a>
+                  </>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <Link href="/dashboard/wallet" passHref>
                 <SidebarMenuButton asChild tooltip="Wallet" isActive={pathname === '/dashboard/wallet'}>
-                  <a>
+                  <>
                     <Wallet />
                     Wallet
-                  </a>
+                  </>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
@@ -116,10 +116,10 @@ export default function DashboardLayout({
             <SidebarMenuItem>
               <Link href="/dashboard/profile" passHref>
                 <SidebarMenuButton asChild tooltip="Edit Profile" isActive={pathname === '/dashboard/profile'}>
-                  <a>
+                  <>
                     <User />
                     Edit Profile
-                  </a>
+                  </>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
