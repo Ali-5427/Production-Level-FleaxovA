@@ -6,7 +6,12 @@ import { useRouter, usePathname } from 'next/navigation';
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import { app } from '@/lib/firebase/config';
-import { login as firebaseLogin, logout as firebaseLogout, register as firebaseRegister } from '@/lib/firebase/auth';
+import { 
+    login as firebaseLogin, 
+    logout as firebaseLogout, 
+    register as firebaseRegister,
+    signInWithGoogle 
+} from '@/lib/firebase/auth';
 import type { Profile } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 
@@ -17,6 +22,7 @@ interface AuthContextType {
     login: typeof firebaseLogin;
     logout: () => Promise<void>;
     register: typeof firebaseRegister;
+    registerWithGoogle: (isSeller: boolean) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,28 +49,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const profileDoc = await getDoc(profileDocRef);
                 if (profileDoc.exists()) {
                     setProfile(profileDoc.data() as Profile);
-                } else {
-                    const newProfile: Profile = {
-                        id: firebaseUser.uid,
-                        fullName: firebaseUser.displayName || 'New User',
-                        email: firebaseUser.email || '',
-isSeller: false,
-                        rating: 0,
-                        reviewsCount: 0,
-                    };
-                    await setDoc(profileDocRef, newProfile);
-                    setProfile(newProfile);
                 }
                 
-                // If user is logged in and tries to go to login/register, redirect to dashboard
-                if (pathname === '/login' || pathname === '/register') {
+                if ((pathname === '/login' || pathname === '/register') && profileDoc.exists()) {
                     router.push('/dashboard');
                 }
 
             } else {
                 setUser(null);
                 setProfile(null);
-                 // Redirect to login if not authenticated and not on a public page
                 if (!isPublicPath) {
                     router.push('/login');
                 }
@@ -121,6 +114,40 @@ isSeller: false,
         }
     }
 
+    const handleRegisterWithGoogle = async (isSeller: boolean) => {
+        try {
+            const userCredential = await signInWithGoogle();
+            const gUser = userCredential.user;
+
+            const profileDocRef = doc(db, "profiles", gUser.uid);
+            const profileDoc = await getDoc(profileDocRef);
+
+            if (!profileDoc.exists()) {
+                const newProfile: Profile = {
+                    id: gUser.uid,
+                    fullName: gUser.displayName || 'Google User',
+                    email: gUser.email || '',
+                    isSeller,
+                    rating: 0,
+                    reviewsCount: 0,
+                    avatarUrl: gUser.photoURL || undefined,
+                };
+                await setDoc(profileDocRef, newProfile);
+                setProfile(newProfile);
+            }
+            toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
+            router.push('/dashboard');
+
+        } catch (error: any) {
+             toast({
+                title: "Registration Failed",
+                description: error.message,
+                variant: "destructive"
+            });
+            throw error;
+        }
+    };
+
 
     const value = {
         user,
@@ -129,6 +156,7 @@ isSeller: false,
         login: handleLogin,
         logout: handleLogout,
         register: handleRegister,
+        registerWithGoogle: handleRegisterWithGoogle,
     };
 
     return (
