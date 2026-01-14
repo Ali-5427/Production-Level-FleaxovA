@@ -23,6 +23,7 @@ interface AuthContextType {
     logout: () => Promise<void>;
     register: typeof firebaseRegister;
     registerWithGoogle: (isSeller: boolean) => Promise<void>;
+    loginWithGoogle: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -154,6 +155,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const handleLoginWithGoogle = async () => {
+        try {
+            await signInWithGoogle();
+            toast({ title: "Login Successful", description: "Welcome back!" });
+            router.push('/dashboard');
+        } catch (error: any) {
+            toast({
+                title: "Login Failed",
+                description: error.message,
+                variant: "destructive",
+            });
+            throw error;
+        }
+    };
+
 
     const value = {
         user,
@@ -163,6 +179,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logout: handleLogout,
         register: handleRegister,
         registerWithGoogle: handleRegisterWithGoogle,
+        loginWithGoogle: handleLoginWithGoogle,
     };
 
     return (
