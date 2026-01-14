@@ -1,3 +1,9 @@
+import { FleaxovaManager } from '@/components/FleaxovaManager';
+
 export default function Home() {
-  return <></>;
+  return (
+    <main className="min-h-screen bg-background">
+      <FleaxovaManager />
+    </main>
+  );
 }
