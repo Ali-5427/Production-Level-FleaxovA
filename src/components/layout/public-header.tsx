@@ -121,7 +121,7 @@ export function PublicHeader() {
             ) : (
               <>
                 <Button variant="ghost" asChild>
-                  <Link href="/login">Log In</Link>
+                  <Link href="/signin">Log In</Link>
                 </Button>
                 <Button asChild>
                   <Link href="/register">Sign Up</Link>
@@ -166,7 +166,7 @@ export function PublicHeader() {
                     <>
                       <SheetClose asChild>
                         <Button variant="ghost" asChild>
-                          <Link href="/login">Log In</Link>
+                          <Link href="/signin">Log In</Link>
                         </Button>
                       </SheetClose>
                       <SheetClose asChild>

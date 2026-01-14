@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            const publicPaths = ['/', '/login', '/register', '/signin'];
+            const publicPaths = ['/', '/signin', '/register'];
             const isPublicPath = publicPaths.some(p => p === pathname) || pathname.startsWith('/services') || pathname.startsWith('/jobs');
 
             if (firebaseUser) {
@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     setProfile(profileDoc.data() as Profile);
                 }
                 
-                if ((pathname === '/login' || pathname === '/register' || pathname === '/signin') && profileDoc.exists()) {
+                if (pathname === '/signin' || pathname === '/register') {
                     router.push('/dashboard');
                 }
 
