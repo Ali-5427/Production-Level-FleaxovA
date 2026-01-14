@@ -26,24 +26,30 @@ export function PublicHeader() {
 
   const navLinks = (
     <>
-      <Link
-        href="/services"
-        className="text-sm font-medium hover:text-primary transition-colors"
-      >
-        Find Talent
-      </Link>
-      <Link
-        href="/jobs"
-        className="text-sm font-medium hover:text-primary transition-colors"
-      >
-        Find Work
-      </Link>
-      <Link
-        href="/#why-fleaxova"
-        className="text-sm font-medium hover:text-primary transition-colors"
-      >
-        Why Fleaxova
-      </Link>
+      <SheetClose asChild>
+        <Link
+          href="/services"
+          className="text-sm font-medium hover:text-primary transition-colors"
+        >
+          Find Talent
+        </Link>
+      </SheetClose>
+      <SheetClose asChild>
+        <Link
+          href="/jobs"
+          className="text-sm font-medium hover:text-primary transition-colors"
+        >
+          Find Work
+        </Link>
+      </SheetClose>
+      <SheetClose asChild>
+        <Link
+          href="/#why-fleaxova"
+          className="text-sm font-medium hover:text-primary transition-colors"
+        >
+          Why Fleaxova
+        </Link>
+      </SheetClose>
     </>
   );
 
@@ -54,7 +60,26 @@ export function PublicHeader() {
       </Link>
 
       {/* Desktop Navigation */}
-      <nav className="hidden items-center gap-6 md:flex">{navLinks}</nav>
+      <nav className="hidden items-center gap-6 md:flex">
+        <Link
+          href="/services"
+          className="text-sm font-medium hover:text-primary transition-colors"
+        >
+          Find Talent
+        </Link>
+        <Link
+          href="/jobs"
+          className="text-sm font-medium hover:text-primary transition-colors"
+        >
+          Find Work
+        </Link>
+        <Link
+          href="/#why-fleaxova"
+          className="text-sm font-medium hover:text-primary transition-colors"
+        >
+          Why Fleaxova
+        </Link>
+      </nav>
 
       <div className="flex items-center gap-2">
         <div className="hidden items-center gap-4 md:flex">
@@ -114,9 +139,11 @@ export function PublicHeader() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right">
-              <Link href="/" className="text-2xl font-bold text-primary">
-                Fleaxova
-              </Link>
+              <SheetClose asChild>
+                <Link href="/" className="text-2xl font-bold text-primary">
+                  Fleaxova
+                </Link>
+              </SheetClose>
               <div className="mt-8 flex flex-col gap-6">
                 {navLinks}
                 <DropdownMenuSeparator />
@@ -128,9 +155,11 @@ export function PublicHeader() {
                      <SheetClose asChild>
                       <Link href="/profile" className="font-medium">Profile</Link>
                     </SheetClose>
-                    <button onClick={() => { logout(); }} className="text-left font-medium">
-                      Logout
-                    </button>
+                    <SheetClose asChild>
+                      <button onClick={() => { logout(); }} className="text-left font-medium">
+                        Logout
+                      </button>
+                    </SheetClose>
                   </>
                 ) : (
                   <>
