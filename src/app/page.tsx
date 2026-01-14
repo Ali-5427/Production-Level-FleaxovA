@@ -1,28 +1,84 @@
+
+"use client";
+
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Briefcase, Search, Star } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link';
+import { useAuth } from '@/hooks/use-auth';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function Home() {
+  const { user, logout } = useAuth();
+
   return (
     <div className="bg-background text-foreground">
       {/* Header */}
       <header className="container mx-auto flex h-20 items-center justify-between px-4 md:px-6">
-        <div className="text-2xl font-bold text-primary">Fleaxova</div>
+        <Link href="/" legacyBehavior passHref>
+          <a className="text-2xl font-bold text-primary">Fleaxova</a>
+        </Link>
         <nav className="hidden items-center gap-6 md:flex">
-          <a href="#" className="text-sm font-medium hover:text-primary">
-            Find Talent
-          </a>
-          <a href="#" className="text-sm font-medium hover:text-primary">
-            Find Work
-          </a>
+          <Link href="/services" legacyBehavior passHref>
+            <a className="text-sm font-medium hover:text-primary">
+              Find Talent
+            </a>
+          </Link>
+          <Link href="/jobs" legacyBehavior passHref>
+            <a className="text-sm font-medium hover:text-primary">
+              Find Work
+            </a>
+          </Link>
           <a href="#" className="text-sm font-medium hover:text-primary">
             Why Fleaxova
           </a>
         </nav>
         <div className="flex items-center gap-4">
-          <Button variant="ghost">Log In</Button>
-          <Button>Sign Up</Button>
+          {user ? (
+             <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar>
+                    <AvatarImage
+                      src={user.photoURL || "https://picsum.photos/seed/user-avatar/100/100"}
+                      alt="User Avatar"
+                    />
+                    <AvatarFallback>{user.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                 <DropdownMenuItem asChild>
+                  <Link href="/dashboard">Dashboard</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Button variant="ghost" asChild>
+                <Link href="/login">Log In</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/register">Sign Up</Link>
+              </Button>
+            </>
+          )}
         </div>
       </header>
 
@@ -38,11 +94,13 @@ export default function Home() {
               Post a job, get proposals, and collaborate with ease.
             </p>
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center md:justify-start">
-              <Button size="lg" className="bg-accent hover:bg-accent/90">
-                Get Started <ArrowRight className="ml-2" />
+              <Button size="lg" className="bg-accent hover:bg-accent/90" asChild>
+                <Link href="/register">
+                  Get Started <ArrowRight className="ml-2" />
+                </Link>
               </Button>
-              <Button size="lg" variant="outline">
-                Browse Services
+              <Button size="lg" variant="outline" asChild>
+                <Link href="/services">Browse Services</Link>
               </Button>
             </div>
           </div>

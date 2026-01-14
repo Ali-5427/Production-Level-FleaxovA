@@ -1,3 +1,6 @@
+
+'use client';
+
 import {
   Sidebar,
   SidebarContent,
@@ -33,43 +36,48 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { user, profile, logout } = useAuth();
+
   return (
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
-            <div className="text-xl font-bold text-primary">Fleaxova</div>
+            <Link href="/" className="text-xl font-bold text-primary">Fleaxova</Link>
           </div>
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
               <Link href="/dashboard" legacyBehavior passHref>
-                <SidebarMenuButton tooltip="Dashboard">
+                <SidebarMenuButton tooltip="Dashboard" isActive>
                   <LayoutGrid />
                   Dashboard
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <Link href="/services" legacyBehavior passHref>
-                <SidebarMenuButton tooltip="Services" isActive>
-                  <Briefcase />
-                  Services
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
+            {profile?.isSeller && (
+              <SidebarMenuItem>
+                <Link href="/services" legacyBehavior passHref>
+                  <SidebarMenuButton tooltip="My Services">
+                    <Briefcase />
+                    My Services
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+            )}
             <SidebarMenuItem>
               <Link href="/jobs" legacyBehavior passHref>
-                <SidebarMenuButton tooltip="Jobs">
+                <SidebarMenuButton tooltip="Find Jobs">
                   <Briefcase />
-                  Jobs
+                  Find Jobs
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
@@ -102,7 +110,7 @@ export default function DashboardLayout({
               </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Logout">
+              <SidebarMenuButton tooltip="Logout" onClick={logout}>
                 <LogOut />
                 Logout
               </SidebarMenuButton>
@@ -132,24 +140,24 @@ export default function DashboardLayout({
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar>
                     <AvatarImage
-                      src="https://picsum.photos/seed/user-avatar/100/100"
+                      src={user?.photoURL || "https://picsum.photos/seed/user-avatar/100/100"}
                       alt="User Avatar"
                     />
-                    <AvatarFallback>U</AvatarFallback>
+                    <AvatarFallback>{profile?.fullName?.charAt(0) || 'U'}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>{profile?.fullName || 'My Account'}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard">Dashboard</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
                   <Link href="/profile">Profile</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link href="/settings">Settings</Link>
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Logout</DropdownMenuItem>
+                <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
