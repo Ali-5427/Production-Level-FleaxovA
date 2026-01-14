@@ -1,0 +1,28 @@
+{
+  "placeholderImages": [
+    {
+      "id": "service-logo-design",
+      "description": "A minimalist logo design.",
+      "imageUrl": "https://picsum.photos/seed/logo-design/600/400",
+      "imageHint": "logo design"
+    },
+    {
+      "id": "service-website-dev",
+      "description": "A responsive website shown on different devices.",
+      "imageUrl": "https://picsum.photos/seed/website-dev/600/400",
+      "imageHint": "website development"
+    },
+    {
+      "id": "service-seo-writing",
+      "description": "Someone writing blog posts.",
+      "imageUrl": "https://picsum.photos/seed/content-writing/600/400",
+      "imageHint": "content writing"
+    },
+    {
+      "id": "service-video-animation",
+      "description": "A video animation being created on a computer.",
+      "imageUrl": "https://picsum.photos/seed/video-animation/600/400",
+      "imageHint": "video animation"
+    }
+  ]
+}

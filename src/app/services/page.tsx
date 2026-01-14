@@ -6,8 +6,13 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { PlusCircle, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function ServicesPage() {
+  const getImage = (hint: string) => {
+    return PlaceHolderImages.find(img => img.imageHint === hint) || { imageUrl: "https://picsum.photos/seed/placeholder/600/400", imageHint: "placeholder" };
+  }
+
   const services = [
     {
       id: "1",
@@ -16,7 +21,8 @@ export default function ServicesPage() {
       rating: 4.9,
       reviews: 120,
       price: 50,
-      image: "https://picsum.photos/seed/service1/600/400"
+      image: getImage("logo design").imageUrl,
+      imageHint: getImage("logo design").imageHint,
     },
     {
       id: "2",
@@ -25,7 +31,8 @@ export default function ServicesPage() {
       rating: 5.0,
       reviews: 88,
       price: 250,
-      image: "https://picsum.photos/seed/service2/600/400"
+      image: getImage("website development").imageUrl,
+      imageHint: getImage("website development").imageHint,
     },
     {
       id: "3",
@@ -34,7 +41,8 @@ export default function ServicesPage() {
       rating: 4.8,
       reviews: 250,
       price: 25,
-      image: "https://picsum.photos/seed/service3/600/400"
+      image: getImage("content writing").imageUrl,
+      imageHint: getImage("content writing").imageHint,
     },
     {
         id: "4",
@@ -43,7 +51,8 @@ export default function ServicesPage() {
         rating: 4.9,
         reviews: 75,
         price: 300,
-        image: "https://picsum.photos/seed/service4/600/400"
+        image: getImage("video animation").imageUrl,
+        imageHint: getImage("video animation").imageHint,
     }
   ];
 
@@ -63,7 +72,14 @@ export default function ServicesPage() {
           <Card key={service.id}>
             <CardHeader className="p-0">
                 <Link href={`/services/${service.id}`}>
-                    <Image src={service.image} alt={service.title} width={600} height={400} className="rounded-t-lg object-cover aspect-video" />
+                    <Image 
+                      src={service.image} 
+                      alt={service.title} 
+                      width={600} 
+                      height={400} 
+                      className="rounded-t-lg object-cover aspect-video" 
+                      data-ai-hint={service.imageHint}
+                    />
                 </Link>
             </CardHeader>
             <CardContent className="p-4">
