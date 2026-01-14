@@ -13,67 +13,143 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetClose,
+} from '@/components/ui/sheet';
+import { Menu } from 'lucide-react';
 
 export function PublicHeader() {
   const { user, profile, logout } = useAuth();
+
+  const navLinks = (
+    <>
+      <Link
+        href="/services"
+        className="text-sm font-medium hover:text-primary transition-colors"
+      >
+        Find Talent
+      </Link>
+      <Link
+        href="/jobs"
+        className="text-sm font-medium hover:text-primary transition-colors"
+      >
+        Find Work
+      </Link>
+      <Link
+        href="/#why-fleaxova"
+        className="text-sm font-medium hover:text-primary transition-colors"
+      >
+        Why Fleaxova
+      </Link>
+    </>
+  );
 
   return (
     <header className="container mx-auto flex h-20 items-center justify-between px-4 md:px-6">
       <Link href="/" className="text-2xl font-bold text-primary">
         Fleaxova
       </Link>
-      <nav className="hidden items-center gap-6 md:flex">
-        <Link href="/services" className="text-sm font-medium hover:text-primary">
-          Find Talent
-        </Link>
-        <Link href="/jobs" className="text-sm font-medium hover:text-primary">
-          Find Work
-        </Link>
-        <Link href="/#why-fleaxova" className="text-sm font-medium hover:text-primary">
-          Why Fleaxova
-        </Link>
-      </nav>
-      <div className="flex items-center gap-4">
-        {user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar>
-                  <AvatarImage
-                    src={
-                      user.photoURL || 'https://picsum.photos/seed/user-avatar/100/100'
-                    }
-                    alt="User Avatar"
-                  />
-                  <AvatarFallback>
-                    {profile?.fullName?.charAt(0) || 'U'}
-                  </AvatarFallback>
-                </Avatar>
+
+      {/* Desktop Navigation */}
+      <nav className="hidden items-center gap-6 md:flex">{navLinks}</nav>
+
+      <div className="flex items-center gap-2">
+        <div className="hidden items-center gap-4 md:flex">
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="relative h-8 w-8 rounded-full"
+                >
+                  <Avatar>
+                    <AvatarImage
+                      src={
+                        user.photoURL ||
+                        'https://picsum.photos/seed/user-avatar/100/100'
+                      }
+                      alt="User Avatar"
+                    />
+                    <AvatarFallback>
+                      {profile?.fullName?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard">Dashboard</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Button variant="ghost" asChild>
+                <Link href="/login">Log In</Link>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/dashboard">Dashboard</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/profile">Profile</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <>
-            <Button variant="ghost" asChild>
-              <Link href="/login">Log In</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/register">Sign Up</Link>
-            </Button>
-          </>
-        )}
+              <Button asChild>
+                <Link href="/register">Sign Up</Link>
+              </Button>
+            </>
+          )}
+        </div>
+
+        {/* Mobile Navigation */}
+        <div className="md:hidden">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right">
+              <Link href="/" className="text-2xl font-bold text-primary">
+                Fleaxova
+              </Link>
+              <div className="mt-8 flex flex-col gap-6">
+                {navLinks}
+                <DropdownMenuSeparator />
+                {user ? (
+                  <>
+                    <SheetClose asChild>
+                      <Link href="/dashboard" className="font-medium">Dashboard</Link>
+                    </SheetClose>
+                     <SheetClose asChild>
+                      <Link href="/profile" className="font-medium">Profile</Link>
+                    </SheetClose>
+                    <button onClick={() => { logout(); }} className="text-left font-medium">
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <SheetClose asChild>
+                      <Button variant="ghost" asChild>
+                        <Link href="/login">Log In</Link>
+                      </Button>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <Button asChild>
+                        <Link href="/register">Sign Up</Link>
+                      </Button>
+                    </SheetClose>
+                  </>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </header>
   );
