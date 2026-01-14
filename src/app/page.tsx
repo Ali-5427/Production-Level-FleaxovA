@@ -3,7 +3,7 @@
 
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Briefcase, Search, Star } from 'lucide-react';
+import { ArrowRight, Briefcase, Search, Star, Zap, Users, ShieldCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
@@ -40,7 +40,7 @@ export default function Home() {
           >
             Find Work
           </Link>
-          <Link href="#" className="text-sm font-medium hover:text-primary">
+          <Link href="#why-fleaxova" className="text-sm font-medium hover:text-primary">
             Why Fleaxova
           </Link>
         </nav>
@@ -118,7 +118,7 @@ export default function Home() {
         </section>
 
         {/* How it works */}
-        <section className="bg-secondary py-20">
+        <section id="how-it-works" className="bg-secondary py-20">
           <div className="container mx-auto px-4 md:px-6">
             <h2 className="mb-12 text-center text-3xl font-bold">How It Works</h2>
             <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
@@ -167,6 +167,54 @@ export default function Home() {
                   <p className="text-muted-foreground">
                     Use our platform to track progress, communicate, and pay securely upon project
                     completion.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+        
+        {/* Why Fleaxova Section */}
+        <section id="why-fleaxova" className="py-20">
+          <div className="container mx-auto px-4 md:px-6">
+            <h2 className="mb-12 text-center text-3xl font-bold">Why Fleaxova?</h2>
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+              <Card className="text-center">
+                <CardHeader>
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                    <Zap className="h-6 w-6 text-primary" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <h3 className="text-xl font-bold mb-2">Fast & Efficient</h3>
+                  <p className="text-muted-foreground">
+                    Connect with top talent quickly and streamline your workflow with our intuitive platform.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="text-center">
+                <CardHeader>
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                    <Users className="h-6 w-6 text-primary" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <h3 className="text-xl font-bold mb-2">Global Talent Pool</h3>
+                  <p className="text-muted-foreground">
+                    Access a diverse network of skilled professionals from around the world, ready to tackle any project.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="text-center">
+                <CardHeader>
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                    <ShieldCheck className="h-6 w-6 text-primary" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <h3 className="text-xl font-bold mb-2">Secure & Reliable</h3>
+                  <p className="text-muted-foreground">
+                    Collaborate with confidence using our secure payment system and transparent review process.
                   </p>
                 </CardContent>
               </Card>
