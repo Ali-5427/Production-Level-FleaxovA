@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             const userCredential = await firebaseLogin(email, password);
             toast({ title: "Login Successful", description: "Welcome back!" });
-            router.push('/dashboard');
+            // The redirect is now handled by onAuthStateChanged
             return userCredential;
         } catch (error: any) {
             let description = "An unexpected error occurred.";
@@ -109,7 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             const userCredential = await firebaseRegister(email, password, fullName, isSeller);
             toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
-            router.push('/dashboard');
+            // The redirect is now handled by onAuthStateChanged
             return userCredential;
         } catch (error: any) {
              toast({
@@ -143,7 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setProfile(newProfile);
             }
             toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
-            router.push('/dashboard');
+            // The redirect is now handled by onAuthStateChanged
 
         } catch (error: any) {
              toast({
@@ -159,7 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             await signInWithGoogle();
             toast({ title: "Login Successful", description: "Welcome back!" });
-            router.push('/dashboard');
+            // The redirect is now handled by onAuthStateChanged
         } catch (error: any) {
             toast({
                 title: "Login Failed",
@@ -184,7 +184,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     return (
         <AuthContext.Provider value={value}>
-            {loading ? <div className="flex items-center justify-center h-screen">Loading...</div> : children}
+            {loading ? <div className="flex items-center justify-center h-screen bg-background">Loading...</div> : children}
         </AuthContext.Provider>
     );
 };
