@@ -188,13 +188,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loginWithGoogle: handleLoginWithGoogle,
     };
 
-    if (!isMounted) {
-        return null;
+    if (!isMounted || loading) {
+        return <div className="flex items-center justify-center h-screen bg-background">Loading...</div>;
     }
 
     return (
         <AuthContext.Provider value={value}>
-            {loading ? <div className="flex items-center justify-center h-screen bg-background">Loading...</div> : children}
+            {children}
         </AuthContext.Provider>
     );
 };
