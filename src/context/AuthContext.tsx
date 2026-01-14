@@ -35,9 +35,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isMounted, setIsMounted] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+    
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -181,6 +187,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         registerWithGoogle: handleRegisterWithGoogle,
         loginWithGoogle: handleLoginWithGoogle,
     };
+
+    if (!isMounted) {
+        return null;
+    }
 
     return (
         <AuthContext.Provider value={value}>
