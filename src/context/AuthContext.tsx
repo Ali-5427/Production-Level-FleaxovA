@@ -118,9 +118,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // The redirect is now handled by onAuthStateChanged
             return userCredential;
         } catch (error: any) {
+             let description = "An unexpected error occurred.";
+            if (error.code === 'auth/email-already-in-use') {
+                description = "This email is already in use. Please log in or use a different email.";
+            } else {
+                description = error.message;
+            }
              toast({
                 title: "Registration Failed",
-                description: error.message,
+                description: description,
                 variant: "destructive"
             });
             throw error;
