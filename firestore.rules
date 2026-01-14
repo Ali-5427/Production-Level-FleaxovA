@@ -14,7 +14,7 @@ service cloud.firestore {
 
     // profiles: Can view all, update own only
     match /profiles/{userId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow create: if isSignedIn() && isOwner(userId);
       allow update: if isSignedIn() && isOwner(userId);
       allow delete: if false;
