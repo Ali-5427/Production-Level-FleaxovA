@@ -8,6 +8,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { PublicHeader } from '@/components/layout/public-header';
 import { usePathname } from 'next/navigation';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { Analytics } from '@vercel/analytics/react';
 
 const metadata: Metadata = {
   title: 'Fleaxova Manager',
@@ -38,6 +39,7 @@ export default function RootLayout({
         </AuthProvider>
         <Toaster />
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
