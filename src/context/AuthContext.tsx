@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            const publicPaths = ['/', '/login', '/register'];
+            const publicPaths = ['/', '/login', '/register', '/signin'];
             const isPublicPath = publicPaths.some(p => p === pathname) || pathname.startsWith('/services') || pathname.startsWith('/jobs');
 
             if (firebaseUser) {
@@ -51,7 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     setProfile(profileDoc.data() as Profile);
                 }
                 
-                if ((pathname === '/login' || pathname === '/register') && profileDoc.exists()) {
+                if ((pathname === '/login' || pathname === '/register' || pathname === '/signin') && profileDoc.exists()) {
                     router.push('/dashboard');
                 }
 
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setUser(null);
                 setProfile(null);
                 if (!isPublicPath) {
-                    router.push('/login');
+                    router.push('/signin');
                 }
             }
             setLoading(false);
@@ -89,9 +89,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             router.push('/dashboard');
             return userCredential;
         } catch (error: any) {
+            let description = "An unexpected error occurred.";
+            if (error.code === 'auth/invalid-credential') {
+                description = "Invalid email or password. Please try again.";
+            } else {
+                description = error.message;
+            }
              toast({
                 title: "Login Failed",
-                description: error.message,
+                description: description,
                 variant: "destructive"
             });
             throw error;
