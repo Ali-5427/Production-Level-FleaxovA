@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from "react";
+import { useMessages } from "@/context/MessageContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,74 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Send } from "lucide-react";
 
-type Message = {
-    from: 'me' | 'other';
-    text: string;
-    time: string;
-};
-
-type Conversation = {
-    id: string;
-    name: string;
-    lastMessage: string;
-    avatar: string;
-    unread?: number;
-    messages: Message[];
-};
-
-const initialConversations: Conversation[] = [
-    {
-        id: '1',
-        name: 'Olivia Smith',
-        lastMessage: 'Sure, I can do that.',
-        avatar: 'https://picsum.photos/seed/olivia/100/100',
-        unread: 2,
-        messages: [
-            { from: 'other', text: 'Hey, how is the project going?', time: '10:00 AM' },
-            { from: 'me', text: 'Hi Olivia, it\'s going well. I should have an update for you by end of day.', time: '10:01 AM' },
-            { from: 'other', text: 'Great to hear. Can you also include the source files?', time: '10:02 AM' },
-            { from: 'me', text: 'Sure, I can do that.', time: '10:03 AM' },
-        ]
-    },
-    {
-        id: '2',
-        name: 'Liam Johnson',
-        lastMessage: 'Perfect, thank you!',
-        avatar: 'https://picsum.photos/seed/liam/100/100',
-        messages: [
-            { from: 'other', text: 'Just confirming the delivery. Looks great!', time: 'Yesterday' },
-            { from: 'me', text: 'Awesome! Glad you like it.', time: 'Yesterday' },
-            { from: 'other', text: 'Perfect, thank you!', time: 'Yesterday' },
-        ]
-    },
-    {
-        id: '3',
-        name: 'Emma Brown',
-        lastMessage: 'See you then!',
-        avatar: 'https://picsum.photos/seed/emma/100/100',
-        messages: [
-             { from: 'me', text: 'Meeting is set for 3 PM tomorrow.', time: '2 days ago' },
-             { from: 'other', text: 'See you then!', time: '2 days ago' },
-        ]
-    },
-];
-
 export default function MessagesPage() {
-    const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
-    const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(conversations[0] || null);
-
-    const handleConversationSelect = (conversation: Conversation) => {
-        setSelectedConversation(conversation);
-        
-        // Mark conversation as read
-        if (conversation.unread) {
-            setConversations(prevConversations => 
-                prevConversations.map(convo => 
-                    convo.id === conversation.id ? { ...convo, unread: 0 } : convo
-                )
-            );
-        }
-    }
+    const { conversations, selectedConversation, selectConversation } = useMessages();
 
     return (
         <div className="h-full flex flex-col">
@@ -93,7 +27,7 @@ export default function MessagesPage() {
                                 "flex items-center gap-4 p-4 cursor-pointer border-b",
                                 selectedConversation?.id === convo.id ? "bg-muted" : "hover:bg-muted/50"
                             )}
-                            onClick={() => handleConversationSelect(convo)}
+                            onClick={() => selectConversation(convo.id)}
                         >
                             <Avatar>
                                 <AvatarImage src={convo.avatar} />
