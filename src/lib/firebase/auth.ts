@@ -7,12 +7,16 @@ import {
     updateProfile as updateFirebaseProfile,
     GoogleAuthProvider,
     signInWithPopup,
+    User,
 } from "firebase/auth";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, setDoc, updateDoc } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { app } from "./config";
+import type { Profile } from '../types';
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
 export async function register(email: string, password: string, fullName: string, isSeller: boolean) {
@@ -47,4 +51,46 @@ export async function logout() {
 
 export async function signInWithGoogle() {
     return signInWithPopup(auth, googleProvider);
+}
+
+export async function updateUserProfile(
+    user: User, 
+    updates: Partial<Profile>, 
+    newAvatarFile?: File
+): Promise<Partial<Profile>> {
+    const profileDocRef = doc(db, "profiles", user.uid);
+    let newAvatarUrl: string | undefined = undefined;
+
+    if (newAvatarFile) {
+        const avatarPath = `avatars/${user.uid}/${newAvatarFile.name}`;
+        const storageRef = ref(storage, avatarPath);
+        const uploadResult = await uploadBytes(storageRef, newAvatarFile);
+        newAvatarUrl = await getDownloadURL(uploadResult.ref);
+    }
+
+    const dataToUpdate: Partial<Profile> = { ...updates };
+    if (newAvatarUrl) {
+        dataToUpdate.avatarUrl = newAvatarUrl;
+    }
+
+    // Filter out undefined values to avoid overwriting fields in firestore
+    Object.keys(dataToUpdate).forEach(key => (dataToUpdate as any)[key] === undefined && delete (dataToUpdate as any)[key]);
+
+    if (Object.keys(dataToUpdate).length > 0) {
+        await updateDoc(profileDocRef, dataToUpdate);
+    }
+
+    const authProfileUpdates: { displayName?: string; photoURL?: string } = {};
+    if (dataToUpdate.fullName) {
+        authProfileUpdates.displayName = dataToUpdate.fullName;
+    }
+    if (dataToUpdate.avatarUrl) {
+        authProfileUpdates.photoURL = dataToUpdate.avatarUrl;
+    }
+
+    if (Object.keys(authProfileUpdates).length > 0) {
+        await updateFirebaseProfile(user, authProfileUpdates);
+    }
+    
+    return dataToUpdate;
 }

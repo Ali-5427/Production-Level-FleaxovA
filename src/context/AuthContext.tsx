@@ -10,7 +10,8 @@ import {
     login as firebaseLogin, 
     logout as firebaseLogout, 
     register as firebaseRegister,
-    signInWithGoogle 
+    signInWithGoogle,
+    updateUserProfile
 } from '@/lib/firebase/auth';
 import type { Profile } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +25,7 @@ interface AuthContextType {
     register: typeof firebaseRegister;
     registerWithGoogle: (isSeller: boolean) => Promise<void>;
     loginWithGoogle: () => Promise<void>;
+    updateProfile: (updates: Partial<Profile>, newAvatarFile?: File) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,18 +41,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const pathname = usePathname();
     const { toast } = useToast();
 
-    // Effect for subscribing to auth state changes. Runs only once.
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
-                setUser(firebaseUser);
                 const profileDocRef = doc(db, "profiles", firebaseUser.uid);
                 const profileDoc = await getDoc(profileDocRef);
                 if (profileDoc.exists()) {
                     setProfile(profileDoc.data() as Profile);
                 } else {
-                    setProfile(null);
+                    setProfile(null); 
                 }
+                setUser(firebaseUser);
             } else {
                 setUser(null);
                 setProfile(null);
@@ -60,21 +61,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         return () => unsubscribe();
     }, []);
-
-    // Effect for handling redirects. Runs when auth state or path changes.
+    
     useEffect(() => {
-        if (loading) return; // Don't redirect until auth state is determined.
+        if (loading) return;
 
-        const publicOnlyPaths = ['/', '/signin', '/register'];
+        const publicOnlyPaths = ['/signin', '/register'];
+        const isPublicHomepage = pathname === '/';
         const isProtectedPath = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
 
         if (user) {
-            // If user is logged in and on a public-only page, redirect to dashboard.
-            if (publicOnlyPaths.includes(pathname)) {
+            if (publicOnlyPaths.includes(pathname) || isPublicHomepage) {
                  router.push('/dashboard');
             }
         } else {
-            // If user is not logged in and on a protected page, redirect to signin.
             if (isProtectedPath) {
                 router.push('/signin');
             }
@@ -99,7 +98,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             const userCredential = await firebaseLogin(email, password);
             toast({ title: "Login Successful", description: "Welcome back!" });
-            // The redirect is now handled by the useEffect hook
             return userCredential;
         } catch (error: any) {
             let description = "An unexpected error occurred.";
@@ -121,7 +119,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             const userCredential = await firebaseRegister(email, password, fullName, isSeller);
             toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
-            // The redirect is now handled by the useEffect hook
             return userCredential;
         } catch (error: any) {
              let description = "An unexpected error occurred.";
@@ -161,7 +158,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setProfile(newProfile);
             }
             toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
-            // The redirect is now handled by the useEffect hook
 
         } catch (error: any) {
              toast({
@@ -177,7 +173,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             await signInWithGoogle();
             toast({ title: "Login Successful", description: "Welcome back!" });
-            // The redirect is now handled by the useEffect hook
         } catch (error: any) {
             toast({
                 title: "Login Failed",
@@ -188,6 +183,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const handleUpdateProfile = async (updates: Partial<Profile>, newAvatarFile?: File) => {
+        if (!user || !profile) {
+            toast({ title: "Update Failed", description: "You must be logged in to update your profile.", variant: "destructive" });
+            throw new Error("User not authenticated");
+        }
+        try {
+            const updatedProfileFields = await updateUserProfile(user, updates, newAvatarFile);
+            
+            setProfile(prevProfile => ({ ...prevProfile!, ...updatedProfileFields }));
+            setUser(auth.currentUser); // Refresh user to get new photoURL
+            
+            toast({ title: "Profile Updated", description: "Your changes have been saved." });
+        } catch (error: any) {
+            toast({
+                title: "Update Failed",
+                description: error.message || "Could not update profile.",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    };
 
     const value = {
         user,
@@ -198,6 +214,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         register: handleRegister,
         registerWithGoogle: handleRegisterWithGoogle,
         loginWithGoogle: handleLoginWithGoogle,
+        updateProfile: handleUpdateProfile,
     };
 
     if (loading) {
