@@ -36,8 +36,8 @@ export default function RootLayout({
             {!isDashboard && <PublicHeader />}
             <main className="flex-grow">{children}</main>
           </div>
+          <Toaster />
         </AuthProvider>
-        <Toaster />
         <SpeedInsights />
         <Analytics />
       </body>

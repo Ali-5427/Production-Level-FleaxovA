@@ -47,8 +47,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            const publicPaths = ['/', '/signin', '/register'];
-            const isPublicPath = publicPaths.some(p => p === pathname) || pathname.startsWith('/services') || pathname.startsWith('/jobs');
+            const publicRedirectPaths = ['/', '/signin', '/register'];
+            const isPublicPath = publicRedirectPaths.some(p => p === pathname) || pathname.startsWith('/services') || pathname.startsWith('/jobs');
 
             if (firebaseUser) {
                 setUser(firebaseUser);
@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     setProfile(profileDoc.data() as Profile);
                 }
                 
-                if (pathname === '/signin' || pathname === '/register') {
+                if (publicRedirectPaths.includes(pathname)) {
                     router.push('/dashboard');
                 }
 

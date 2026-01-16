@@ -27,23 +27,23 @@ type Conversation = {
 
 export default function MessagesPage() {
     const conversations: Conversation[] = [
-        { 
-            id: '1', 
-            name: 'Olivia Smith', 
-            lastMessage: 'Sure, I can do that.', 
-            avatar: 'https://picsum.photos/seed/olivia/100/100', 
+        {
+            id: '1',
+            name: 'Olivia Smith',
+            lastMessage: 'Sure, I can do that.',
+            avatar: 'https://picsum.photos/seed/olivia/100/100',
             unread: 2,
             messages: [
                 { from: 'other', text: 'Hey, how is the project going?', time: '10:00 AM' },
                 { from: 'me', text: 'Hi Olivia, it\'s going well. I should have an update for you by end of day.', time: '10:01 AM' },
                 { from: 'other', text: 'Great to hear. Can you also include the source files?', time: '10:02 AM' },
                 { from: 'me', text: 'Sure, I can do that.', time: '10:03 AM' },
-            ] 
+            ]
         },
-        { 
-            id: '2', 
-            name: 'Liam Johnson', 
-            lastMessage: 'Perfect, thank you!', 
+        {
+            id: '2',
+            name: 'Liam Johnson',
+            lastMessage: 'Perfect, thank you!',
             avatar: 'https://picsum.photos/seed/liam/100/100',
             messages: [
                 { from: 'other', text: 'Just confirming the delivery. Looks great!', time: 'Yesterday' },
@@ -51,10 +51,10 @@ export default function MessagesPage() {
                 { from: 'other', text: 'Perfect, thank you!', time: 'Yesterday' },
             ]
         },
-        { 
-            id: '3', 
-            name: 'Emma Brown', 
-            lastMessage: 'See you then!', 
+        {
+            id: '3',
+            name: 'Emma Brown',
+            lastMessage: 'See you then!',
             avatar: 'https://picsum.photos/seed/emma/100/100',
             messages: [
                  { from: 'me', text: 'Meeting is set for 3 PM tomorrow.', time: '2 days ago' },
@@ -70,16 +70,16 @@ export default function MessagesPage() {
     }
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="h-full flex flex-col">
             <div className="flex-grow flex min-h-0">
-                <aside className="w-[300px] border-r flex flex-col">
+                <aside className="w-[300px] border-r flex flex-col shrink-0">
                     <div className="p-4 border-b">
                         <h2 className="text-xl font-bold">Chats</h2>
                     </div>
                     <ScrollArea className="flex-1">
                     {conversations.map(convo => (
-                        <div 
-                            key={convo.id} 
+                        <div
+                            key={convo.id}
                             className={cn(
                                 "flex items-center gap-4 p-4 cursor-pointer border-b",
                                 selectedConversation?.id === convo.id ? "bg-muted" : "hover:bg-muted/50"
