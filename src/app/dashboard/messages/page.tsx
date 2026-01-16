@@ -24,49 +24,58 @@ type Conversation = {
     messages: Message[];
 };
 
+const initialConversations: Conversation[] = [
+    {
+        id: '1',
+        name: 'Olivia Smith',
+        lastMessage: 'Sure, I can do that.',
+        avatar: 'https://picsum.photos/seed/olivia/100/100',
+        unread: 2,
+        messages: [
+            { from: 'other', text: 'Hey, how is the project going?', time: '10:00 AM' },
+            { from: 'me', text: 'Hi Olivia, it\'s going well. I should have an update for you by end of day.', time: '10:01 AM' },
+            { from: 'other', text: 'Great to hear. Can you also include the source files?', time: '10:02 AM' },
+            { from: 'me', text: 'Sure, I can do that.', time: '10:03 AM' },
+        ]
+    },
+    {
+        id: '2',
+        name: 'Liam Johnson',
+        lastMessage: 'Perfect, thank you!',
+        avatar: 'https://picsum.photos/seed/liam/100/100',
+        messages: [
+            { from: 'other', text: 'Just confirming the delivery. Looks great!', time: 'Yesterday' },
+            { from: 'me', text: 'Awesome! Glad you like it.', time: 'Yesterday' },
+            { from: 'other', text: 'Perfect, thank you!', time: 'Yesterday' },
+        ]
+    },
+    {
+        id: '3',
+        name: 'Emma Brown',
+        lastMessage: 'See you then!',
+        avatar: 'https://picsum.photos/seed/emma/100/100',
+        messages: [
+             { from: 'me', text: 'Meeting is set for 3 PM tomorrow.', time: '2 days ago' },
+             { from: 'other', text: 'See you then!', time: '2 days ago' },
+        ]
+    },
+];
 
 export default function MessagesPage() {
-    const conversations: Conversation[] = [
-        {
-            id: '1',
-            name: 'Olivia Smith',
-            lastMessage: 'Sure, I can do that.',
-            avatar: 'https://picsum.photos/seed/olivia/100/100',
-            unread: 2,
-            messages: [
-                { from: 'other', text: 'Hey, how is the project going?', time: '10:00 AM' },
-                { from: 'me', text: 'Hi Olivia, it\'s going well. I should have an update for you by end of day.', time: '10:01 AM' },
-                { from: 'other', text: 'Great to hear. Can you also include the source files?', time: '10:02 AM' },
-                { from: 'me', text: 'Sure, I can do that.', time: '10:03 AM' },
-            ]
-        },
-        {
-            id: '2',
-            name: 'Liam Johnson',
-            lastMessage: 'Perfect, thank you!',
-            avatar: 'https://picsum.photos/seed/liam/100/100',
-            messages: [
-                { from: 'other', text: 'Just confirming the delivery. Looks great!', time: 'Yesterday' },
-                { from: 'me', text: 'Awesome! Glad you like it.', time: 'Yesterday' },
-                { from: 'other', text: 'Perfect, thank you!', time: 'Yesterday' },
-            ]
-        },
-        {
-            id: '3',
-            name: 'Emma Brown',
-            lastMessage: 'See you then!',
-            avatar: 'https://picsum.photos/seed/emma/100/100',
-            messages: [
-                 { from: 'me', text: 'Meeting is set for 3 PM tomorrow.', time: '2 days ago' },
-                 { from: 'other', text: 'See you then!', time: '2 days ago' },
-            ]
-        },
-    ];
-
+    const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
     const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(conversations[0] || null);
 
     const handleConversationSelect = (conversation: Conversation) => {
         setSelectedConversation(conversation);
+        
+        // Mark conversation as read
+        if (conversation.unread) {
+            setConversations(prevConversations => 
+                prevConversations.map(convo => 
+                    convo.id === conversation.id ? { ...convo, unread: 0 } : convo
+                )
+            );
+        }
     }
 
     return (
@@ -94,7 +103,7 @@ export default function MessagesPage() {
                                 <p className="font-semibold truncate">{convo.name}</p>
                                 <p className="text-sm text-muted-foreground truncate">{convo.lastMessage}</p>
                             </div>
-                            {convo.unread && <div className="bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center shrink-0">{convo.unread}</div>}
+                            {convo.unread ? <div className="bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center shrink-0">{convo.unread}</div> : null}
                         </div>
                     ))}
                     </ScrollArea>
