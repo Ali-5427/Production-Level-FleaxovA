@@ -13,6 +13,7 @@ import { getFirestore, doc, setDoc, updateDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { app } from "./config";
 import type { Profile } from '../types';
+import imageCompression from 'browser-image-compression';
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -62,10 +63,22 @@ export async function updateUserProfile(
     let newAvatarUrl: string | undefined = undefined;
 
     if (newAvatarFile) {
-        const avatarPath = `avatars/${user.uid}/${newAvatarFile.name}`;
-        const storageRef = ref(storage, avatarPath);
-        const uploadResult = await uploadBytes(storageRef, newAvatarFile);
-        newAvatarUrl = await getDownloadURL(uploadResult.ref);
+        const options = {
+          maxSizeMB: 0.5, // Max file size in MB
+          maxWidthOrHeight: 800, // Max width or height in pixels
+          useWebWorker: true,
+        };
+
+        try {
+            const compressedFile = await imageCompression(newAvatarFile, options);
+            const avatarPath = `avatars/${user.uid}/${compressedFile.name}`;
+            const storageRef = ref(storage, avatarPath);
+            const uploadResult = await uploadBytes(storageRef, compressedFile);
+            newAvatarUrl = await getDownloadURL(uploadResult.ref);
+        } catch (error) {
+            console.error('Image compression failed:', error);
+            throw new Error("Could not process image. Please try another one.");
+        }
     }
 
     const dataToUpdate: Partial<Profile> = { ...updates };
