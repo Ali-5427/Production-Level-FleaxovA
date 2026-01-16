@@ -35,45 +35,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(true);
-    const [isMounted, setIsMounted] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
 
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
-    
-
+    // Effect for subscribing to auth state changes. Runs only once.
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            const publicRedirectPaths = ['/', '/signin', '/register'];
-            const isPublicPath = publicRedirectPaths.some(p => p === pathname) || pathname.startsWith('/services') || pathname.startsWith('/jobs');
-
             if (firebaseUser) {
                 setUser(firebaseUser);
                 const profileDocRef = doc(db, "profiles", firebaseUser.uid);
                 const profileDoc = await getDoc(profileDocRef);
                 if (profileDoc.exists()) {
                     setProfile(profileDoc.data() as Profile);
+                } else {
+                    setProfile(null);
                 }
-                
-                if (publicRedirectPaths.includes(pathname)) {
-                    router.push('/dashboard');
-                }
-
             } else {
                 setUser(null);
                 setProfile(null);
-                if (!isPublicPath) {
-                    router.push('/signin');
-                }
             }
             setLoading(false);
         });
 
         return () => unsubscribe();
-    }, [router, pathname]);
+    }, []);
+
+    // Effect for handling redirects. Runs when auth state or path changes.
+    useEffect(() => {
+        if (loading) return; // Don't redirect until auth state is determined.
+
+        const publicOnlyPaths = ['/', '/signin', '/register'];
+        const isProtectedPath = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
+
+        if (user) {
+            // If user is logged in and on a public-only page, redirect to dashboard.
+            if (publicOnlyPaths.includes(pathname)) {
+                 router.push('/dashboard');
+            }
+        } else {
+            // If user is not logged in and on a protected page, redirect to signin.
+            if (isProtectedPath) {
+                router.push('/signin');
+            }
+        }
+    }, [user, loading, pathname, router]);
 
     const handleLogout = async () => {
         try {
@@ -93,7 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             const userCredential = await firebaseLogin(email, password);
             toast({ title: "Login Successful", description: "Welcome back!" });
-            // The redirect is now handled by onAuthStateChanged
+            // The redirect is now handled by the useEffect hook
             return userCredential;
         } catch (error: any) {
             let description = "An unexpected error occurred.";
@@ -115,7 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             const userCredential = await firebaseRegister(email, password, fullName, isSeller);
             toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
-            // The redirect is now handled by onAuthStateChanged
+            // The redirect is now handled by the useEffect hook
             return userCredential;
         } catch (error: any) {
              let description = "An unexpected error occurred.";
@@ -155,7 +161,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setProfile(newProfile);
             }
             toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
-            // The redirect is now handled by onAuthStateChanged
+            // The redirect is now handled by the useEffect hook
 
         } catch (error: any) {
              toast({
@@ -171,7 +177,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             await signInWithGoogle();
             toast({ title: "Login Successful", description: "Welcome back!" });
-            // The redirect is now handled by onAuthStateChanged
+            // The redirect is now handled by the useEffect hook
         } catch (error: any) {
             toast({
                 title: "Login Failed",
@@ -194,7 +200,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loginWithGoogle: handleLoginWithGoogle,
     };
 
-    if (!isMounted || loading) {
+    if (loading) {
         return <div className="flex items-center justify-center h-screen bg-background">Loading...</div>;
     }
 
