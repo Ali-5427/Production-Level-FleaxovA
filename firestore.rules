@@ -2,11 +2,99 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // WARNING: These rules are completely insecure and for development purposes only.
-    // They allow anyone to read, write, and delete any data in your database.
-    // You MUST secure these rules before deploying your app to production.
-    match /{document=**} {
-      allow read, write: if true;
+  
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isStudent(userId) {
+      return getUserData(userId).role == 'student';
+    }
+    
+    function isClient(userId) {
+      return getUserData(userId).role == 'client';
+    }
+    
+    function isAdmin(userId) {
+      return getUserData(userId).role == 'admin';
+    }
+
+    // USERS: Can be read by any signed-in user, created on signup.
+    // Only owner can update their own name.
+    // Admins can update roles, status, and wallet balance.
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId);
+      allow update: if (isOwner(userId) && request.resource.data.keys().hasOnly(['name']))
+                    || isAdmin(request.auth.uid);
+    }
+
+    // PROFILES: Can be read by any signed-in user, only owner can create/update.
+    match /profiles/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
+    }
+    
+    // SERVICES: Can be read by any signed-in user. Only 'students' (freelancers) can CUD their own services.
+    match /services/{serviceId} {
+      allow read: if isSignedIn();
+      allow create: if isStudent(request.auth.uid) && request.resource.data.freelancerId == request.auth.uid;
+      allow update, delete: if isStudent(request.auth.uid) && get(path).data.freelancerId == request.auth.uid;
+    }
+    
+    // JOBS: Can be read by any signed-in user. Only 'clients' can CUD their own jobs.
+    match /jobs/{jobId} {
+      allow read: if isSignedIn();
+      allow create: if isClient(request.auth.uid) && request.resource.data.clientId == request.auth.uid;
+      allow update, delete: if (isClient(request.auth.uid) && get(path).data.clientId == request.auth.uid) || isAdmin(request.auth.uid);
+    }
+    
+    // APPLICATIONS: Students can create. Client of the job and applicant can read. Client can update status.
+    match /applications/{applicationId} {
+      allow read: if isSignedIn() && 
+                    (isOwner(resource.data.freelancerId) || isOwner(get(/databases/$(database)/documents/jobs/$(resource.data.jobId)).data.clientId));
+      allow create: if isStudent(request.auth.uid) && request.resource.data.freelancerId == request.auth.uid;
+      allow update: if isClient(request.auth.uid) && isOwner(get(/databases/$(database)/documents/jobs/$(resource.data.jobId)).data.clientId);
+    }
+    
+    // ORDERS: Client, freelancer, or admin can read. Client can create. Freelancer/Client can update status.
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (isOwner(resource.data.clientId) || isOwner(resource.data.freelancerId) || isAdmin(request.auth.uid));
+      allow create: if isClient(request.auth.uid) && isOwner(request.resource.data.clientId);
+      allow update: if isSignedIn() && (isOwner(resource.data.clientId) || isOwner(resource.data.freelancerId));
+    }
+    
+    // REVIEWS: Anyone can read. Only client/freelancer involved in an order/job can create.
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isOwner(request.resource.data.reviewerId);
+    }
+
+    // MESSAGES: Only sender and receiver can read/write.
+    match /messages/{messageId} {
+      allow create: if isSignedIn() && isOwner(request.resource.data.senderId);
+      allow read, update, delete: if isSignedIn() && (isOwner(resource.data.senderId) || isOwner(resource.data.receiverId));
+    }
+    
+    // NOTIFICATIONS: Only the user can read/update their notifications.
+    match /notifications/{notificationId} {
+      allow read, update: if isSignedIn() && isOwner(resource.data.userId);
+      allow create: if isSignedIn();
+    }
+
+    // WITHDRAWALS: User can create for themselves. Only admin can read/update.
+    match /withdrawals/{withdrawalId} {
+      allow read, update: if isAdmin(request.auth.uid);
+      allow create: if isOwner(request.resource.data.userId);
     }
   }
 }

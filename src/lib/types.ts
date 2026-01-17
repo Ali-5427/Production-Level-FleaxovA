@@ -1,58 +1,83 @@
 // Base user from Firebase Authentication
-export interface User {
+export interface AuthUser {
   uid: string;
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
 }
 
+// Corresponds to the 'users' collection in Firestore
+export interface UserAccount {
+  id: string; // User UID
+  name: string;
+  email: string;
+  role: "student" | "client" | "admin";
+  walletBalance: number;
+  createdAt: Date;
+  status: "active" | "suspended";
+}
+
 // Corresponds to the 'profiles' collection
 export interface Profile {
-  id: string; // Corresponds to User UID
-  fullName: string;
-  email: string;
-  avatarUrl?: string;
+  id: string; // User UID
+  title?: string;
   bio?: string;
   skills?: string[];
-  isSeller: boolean;
-  rating: number;
+  avatarUrl?: string;
+  portfolio?: {
+      title: string;
+      description: string;
+      url: string;
+      imageUrl?: string;
+  }[];
+  socialLinks?: {
+      github?: string;
+      linkedin?: string;
+      twitter?: string;
+  };
+  rating: number; 
   reviewsCount: number;
 }
+
 
 // Corresponds to the 'services' collection
 export interface Service {
   id: string;
-  sellerId: string; // FK to profiles collection
+  freelancerId: string;
   title: string;
   description: string;
-  price: number; // Constraint: >= 100 will be handled in application logic
   category: string;
-  tags?: string[];
+  price: number;
+  deliveryTime: number;
   imageUrl?: string;
   rating: number;
   reviewsCount: number;
+  tags?: string[];
   createdAt: Date;
 }
 
 // Corresponds to the 'jobs' collection
 export interface Job {
   id: string;
-  clientId: string; // FK to profiles collection
+  clientId: string; 
   title: string;
   description: string;
+  category: string;
   budget: number;
   skills: string[];
+  deadline: Date;
+  status: 'open' | 'assigned' | 'completed' | 'cancelled';
+  assignedFreelancerId?: string | null;
   createdAt: Date;
-  status: 'open' | 'in-progress' | 'completed' | 'cancelled';
 }
 
 // Corresponds to the 'applications' collection
 export interface Application {
   id: string;
-  jobId: string; // FK to jobs collection
-  freelancerId: string; // FK to profiles collection
-  proposal: string;
-  price: number;
+  jobId: string;
+  freelancerId: string;
+  coverLetter: string;
+  bidAmount: number;
   createdAt: Date;
   status: 'pending' | 'accepted' | 'rejected';
 }
@@ -60,21 +85,22 @@ export interface Application {
 // Corresponds to the 'orders' collection
 export interface Order {
   id: string;
-  serviceId: string; // FK to services collection
-  buyerId: string; // FK to profiles collection
-  sellerId: string; // FK to profiles collection
+  serviceId: string;
+  clientId: string;
+  freelancerId: string;
   price: number;
   createdAt: Date;
-  status: 'pending' | 'in-progress' | 'delivered' | 'completed' | 'disputed';
+  paymentId?: string;
+  status: 'pending_payment' | 'active' | 'completed' | 'cancelled' | 'disputed' | 'delivered';
 }
 
 // Corresponds to the 'reviews' collection
 export interface Review {
   id: string;
-  orderId?: string; // FK to orders collection
-  jobId?: string; // FK to jobs collection
-  reviewerId: string; // FK to profiles collection
-  revieweeId: string; // FK to profiles collection
+  serviceId?: string;
+  jobId?: string;
+  reviewerId: string;
+  revieweeId: string;
   rating: number; // 1-5
   comment: string;
   createdAt: Date;
@@ -85,17 +111,19 @@ export interface Review {
 export interface Message {
   id: string;
   conversationId: string;
-  senderId: string; // FK to profiles collection
-  receiverId: string; // FK to profiles collection
-  text: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
   createdAt: Date;
+  isRead: boolean;
 }
 
 // Corresponds to the 'notifications' collection
 export interface Notification {
   id: string;
-  userId: string; // FK to profiles collection
-  message: string;
+  userId: string;
+  type: string;
+  content: string;
   isRead: boolean;
   createdAt: Date;
   link?: string;
@@ -104,10 +132,11 @@ export interface Notification {
 // Corresponds to the 'withdrawals' collection
 export interface Withdrawal {
     id: string;
-    userId: string; // FK to profiles collection
+    userId: string;
     amount: number;
     method: string; // e.g., 'PayPal', 'Bank Transfer'
-    status: 'pending' | 'completed' | 'failed';
+    status: 'pending' | 'approved' | 'rejected';
+    paymentDetails: object,
     createdAt: Date;
     completedAt?: Date;
 }
