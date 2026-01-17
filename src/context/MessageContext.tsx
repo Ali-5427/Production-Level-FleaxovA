@@ -56,6 +56,33 @@ const initialConversations: Conversation[] = [
     },
 ];
 
+// --- NEW LocalStorage Logic ---
+const READ_CONVOS_KEY = 'fleaxova_read_conversations';
+
+const getReadConvoIds = (): Set<string> => {
+    if (typeof window === 'undefined') {
+        return new Set();
+    }
+    try {
+        const item = window.localStorage.getItem(READ_CONVOS_KEY);
+        return item ? new Set(JSON.parse(item)) : new Set();
+    } catch (error) {
+        console.warn('Error reading from localStorage', error);
+        return new Set();
+    }
+}
+
+const addReadConvoId = (id: string) => {
+    if (typeof window === 'undefined') return;
+    try {
+        const currentIds = getReadConvoIds();
+        currentIds.add(id);
+        window.localStorage.setItem(READ_CONVOS_KEY, JSON.stringify(Array.from(currentIds)));
+    } catch (error) {
+        console.warn('Error writing to localStorage', error);
+    }
+}
+
 
 // --- Global Store Implementation ---
 
@@ -75,6 +102,12 @@ const messageReducer = (state: MessageState, action: Action): MessageState => {
             if (conversationId === state.selectedConversationId) {
               return state;
             }
+
+            // Side effect: update localStorage when a conversation is selected
+            if (conversationId) {
+                addReadConvoId(conversationId);
+            }
+            
             const newConversations = state.conversations.map(convo => 
                 convo.id === conversationId ? { ...convo, unread: 0 } : convo
             );
@@ -95,10 +128,14 @@ class MessageStore {
     private listeners: Set<(state: MessageState) => void> = new Set();
 
     constructor() {
+        const readIds = getReadConvoIds();
+        const processedConversations = initialConversations.map(convo =>
+            readIds.has(convo.id) ? { ...convo, unread: 0 } : convo
+        );
+
         this.state = {
-            conversations: initialConversations,
-            // Select the first conversation by default
-            selectedConversationId: initialConversations.length > 0 ? initialConversations[0].id : null,
+            conversations: processedConversations,
+            selectedConversationId: null, // Nothing is selected by default
         };
     }
 
