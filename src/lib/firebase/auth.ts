@@ -9,14 +9,14 @@ import {
     signInWithPopup,
     User,
 } from "firebase/auth";
-import { getFirestore, doc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, setDoc, updateDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { app } from "./config";
+import { db } from "./firestore";
 import type { Profile } from '../types';
 import imageCompression from 'browser-image-compression';
 
 const auth = getAuth(app);
-const db = getFirestore(app);
 const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 

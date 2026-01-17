@@ -4,8 +4,9 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { app } from '@/lib/firebase/config';
+import { db } from '@/lib/firebase/firestore';
 import { 
     login as firebaseLogin, 
     logout as firebaseLogout, 
@@ -31,7 +32,6 @@ interface AuthContextType {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const auth = getAuth(app);
-const db = getFirestore(app);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
