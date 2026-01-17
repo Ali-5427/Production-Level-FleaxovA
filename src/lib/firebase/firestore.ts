@@ -6,10 +6,12 @@ import {
   getDocs,
   serverTimestamp,
   query,
-  orderBy
+  orderBy,
+  doc,
+  getDoc
 } from "firebase/firestore";
 import { app } from "./config";
-import type { Service, Job } from '../types';
+import type { Service, Job, Profile } from '../types';
 
 // Initialize Firestore with long-polling enabled to prevent connection issues in some environments
 const db = initializeFirestore(app, {
@@ -42,6 +44,22 @@ export async function getServices(): Promise<Service[]> {
     });
 }
 
+export async function getServiceById(id: string): Promise<Service | null> {
+    const docRef = doc(db, 'services', id);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+            id: docSnap.id,
+            ...data,
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+        } as Service;
+    } else {
+        return null;
+    }
+}
+
 // Jobs
 const jobsCollection = collection(db, 'jobs');
 
@@ -64,6 +82,17 @@ export async function getJobs(): Promise<Job[]> {
         createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
       } as Job;
     });
+}
+
+// Profiles
+export async function getProfile(userId: string): Promise<Profile | null> {
+    if (!userId) return null;
+    const profileDocRef = doc(db, 'profiles', userId);
+    const docSnap = await getDoc(profileDocRef);
+    if (docSnap.exists()) {
+        return docSnap.data() as Profile;
+    }
+    return null;
 }
 
 

@@ -4,7 +4,7 @@ Here is a summary of the completed phases for the Fleaxova MVP build.
 - **Phase 1: Project Setup & Firebase Config:** Yes
 - **Phase 2: Firestore Database Structure:** Yes (Partially)
 - **Phase 3: Firebase Auth Setup:** Yes
-- **Phase 4: Service Marketplace:** Yes (Partially)
+- **Phase 4: Service Marketplace:** Yes (Partially - Detail page now dynamic)
 - **Phase 5: Job Board:** Yes (Partially)
 - **Phase 6: Order & Payment Flow:** No
 - **Phase 7: Wallet & Withdrawals:** No (UI Mockup Only)
