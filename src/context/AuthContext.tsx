@@ -116,7 +116,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 description: description,
                 variant: "destructive"
             });
-            throw error;
         }
     }
 
@@ -138,7 +137,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 description: description,
                 variant: "destructive"
             });
-            throw error;
         }
     }
 
@@ -175,7 +173,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 description: error.message,
                 variant: "destructive"
             });
-            throw error;
         }
     };
 
@@ -190,7 +187,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 description: error.message,
                 variant: "destructive",
             });
-            throw error;
         }
     };
 
@@ -234,5 +230,3 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         </AuthContext.Provider>
     );
 };
-
-    
