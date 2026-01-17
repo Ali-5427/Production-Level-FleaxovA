@@ -66,7 +66,7 @@ export async function updateUserProfile(
         const options = {
           maxSizeMB: 0.5, // Max file size in MB
           maxWidthOrHeight: 800, // Max width or height in pixels
-          useWebWorker: true,
+          useWebWorker: false,
         };
 
         try {
