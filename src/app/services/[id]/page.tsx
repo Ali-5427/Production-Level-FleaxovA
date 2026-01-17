@@ -16,9 +16,11 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
   const [service, setService] = useState<Service | null>(null);
   const [seller, setSeller] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const { id } = params;
 
   useEffect(() => {
-    const { id } = params;
+    if (!id) return;
+    
     const fetchServiceData = async () => {
       setLoading(true);
       const fetchedService = await getServiceById(id);
@@ -31,7 +33,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
     };
 
     fetchServiceData();
-  }, [params]);
+  }, [id]);
 
   if (loading) {
     return (
