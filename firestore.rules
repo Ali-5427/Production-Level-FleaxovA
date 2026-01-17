@@ -71,7 +71,7 @@ service cloud.firestore {
       allow update: if isSignedIn() && (isOwner(resource.data.clientId) || isOwner(resource.data.freelancerId));
     }
     
-    // REVIEWS: Anyone can read. Only client/freelancer involved in an order/job can create.
+    // REVIEWS: Anyone can read. Only a signed-in user can create a review for themselves.
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if isSignedIn() && isOwner(request.resource.data.reviewerId);

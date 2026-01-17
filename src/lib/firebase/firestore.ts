@@ -15,7 +15,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { app } from "./config";
-import type { Service, Job, User, Application } from '../types';
+import type { Service, Job, User, Application, Review } from '../types';
 
 // Initialize Firestore with long-polling enabled to prevent connection issues in some environments
 const db = initializeFirestore(app, {
@@ -223,6 +223,66 @@ export async function getUser(userId: string): Promise<User | null> {
         return { ...docSnap.data(), id: docSnap.id } as User;
     }
     return null;
+}
+
+// Reviews
+const reviewsCollection = collection(db, 'reviews');
+
+export async function getReviewsForService(serviceId: string): Promise<Review[]> {
+    const q = query(reviewsCollection, where('serviceId', '==', serviceId), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+        } as Review;
+    });
+}
+
+export async function addReviewAndRecalculateRating(reviewData: Omit<Review, 'id' | 'createdAt'>): Promise<void> {
+    const serviceRef = doc(db, 'services', reviewData.serviceId);
+    const freelancerRef = doc(db, 'users', reviewData.revieweeId);
+    const reviewRef = doc(collection(db, 'reviews'));
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const serviceDoc = await transaction.get(serviceRef);
+            const freelancerDoc = await transaction.get(freelancerRef);
+
+            if (!serviceDoc.exists() || !freelancerDoc.exists()) {
+                throw new Error("Service or Freelancer not found!");
+            }
+
+            const serviceData = serviceDoc.data() as Service;
+            const freelancerData = freelancerDoc.data() as User;
+            
+            // Recalculate service rating
+            const serviceOldRating = serviceData.rating || 0;
+            const serviceOldCount = serviceData.reviewsCount || 0;
+            const serviceNewCount = serviceOldCount + 1;
+            const serviceNewRating = ((serviceOldRating * serviceOldCount) + reviewData.rating) / serviceNewCount;
+
+            // Recalculate freelancer's overall rating
+            const freelancerOldRating = freelancerData.rating || 0;
+            const freelancerOldCount = freelancerData.reviewsCount || 0;
+            const freelancerNewCount = freelancerOldCount + 1;
+            const freelancerNewRating = ((freelancerOldRating * freelancerOldCount) + reviewData.rating) / freelancerNewCount;
+            
+            // 1. Create the new review
+            transaction.set(reviewRef, { ...reviewData, createdAt: serverTimestamp() });
+            
+            // 2. Update the service
+            transaction.update(serviceRef, { rating: serviceNewRating, reviewsCount: serviceNewCount });
+
+            // 3. Update the freelancer's profile
+            transaction.update(freelancerRef, { rating: freelancerNewRating, reviewsCount: freelancerNewCount });
+        });
+    } catch (e) {
+        console.error("Review transaction failed: ", e);
+        throw e; // Re-throw the error to be caught by the calling component
+    }
 }
 
 

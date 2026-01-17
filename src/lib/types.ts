@@ -101,15 +101,16 @@ export interface Order {
 // Corresponds to the 'reviews' collection
 export interface Review {
   id: string;
-  serviceId?: string;
-  jobId?: string;
-  reviewerId: string;
-  revieweeId: string;
+  serviceId: string; // The service being reviewed
+  reviewerId: string; // The user who wrote the review
+  reviewerName: string;
+  reviewerAvatarUrl?: string;
+  revieweeId: string; // The freelancer who owns the service
   rating: number; // 1-5
   comment: string;
-  createdAt: Date;
-  type: 'service' | 'job';
+  createdAt: any; // Firestore Timestamp
 }
+
 
 // Corresponds to the 'messages' collection
 export interface Message {

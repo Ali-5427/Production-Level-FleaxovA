@@ -11,11 +11,16 @@ import Image from "next/image";
 import { getServiceById, getUser } from "@/lib/firebase/firestore";
 import type { Service, User } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/hooks/use-auth";
+import { AddReviewDialog } from "@/components/reviews/AddReviewDialog";
+import { ServiceReviews } from "@/components/reviews/ServiceReviews";
 
 export default function ServiceDetailPage({ params }: { params: { id: string } }) {
+  const { user } = useAuth();
   const [service, setService] = useState<Service | null>(null);
   const [seller, setSeller] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0);
   const { id } = params;
 
   useEffect(() => {
@@ -33,7 +38,11 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
     };
 
     fetchServiceData();
-  }, [id]);
+  }, [id, reviewRefreshTrigger]);
+
+  const handleReviewAdded = () => {
+    setReviewRefreshTrigger(prev => prev + 1);
+  };
 
   if (loading) {
     return (
@@ -76,9 +85,9 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        <div className="lg:col-span-2">
-          <h1 className="text-3xl font-bold mb-4">{service.title}</h1>
-          <div className="flex items-center gap-4 mb-4">
+        <div className="lg:col-span-2 space-y-6">
+          <h1 className="text-3xl font-bold">{service.title}</h1>
+          <div className="flex items-center gap-4">
             {seller && (
               <>
                 <Avatar>
@@ -95,21 +104,27 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
               <span className="text-muted-foreground ml-1">({service.reviewsCount} reviews)</span>
             </div>
           </div>
-          <Card className="mb-6">
+          <Card>
             <CardContent className="p-0">
               <Image src={service.imageUrl || placeholderImage} alt={service.title} width={800} height={450} className="rounded-lg object-cover w-full aspect-video" />
             </CardContent>
           </Card>
-          <h2 className="text-2xl font-bold mb-4">About this service</h2>
-          <p className="text-muted-foreground leading-relaxed">{service.description}</p>
-          {service.tags && service.tags.length > 0 && (
-            <div className="mt-6 flex flex-wrap gap-2">
-              {service.tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
-            </div>
-          )}
+          
+          <div>
+            <h2 className="text-2xl font-bold mb-4">About this service</h2>
+            <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{service.description}</p>
+            {service.tags && service.tags.length > 0 && (
+                <div className="mt-6 flex flex-wrap gap-2">
+                {service.tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+                </div>
+            )}
+          </div>
+
+          <ServiceReviews serviceId={service.id} refreshTrigger={reviewRefreshTrigger} />
+
         </div>
 
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex justify-between items-baseline">
@@ -124,6 +139,11 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
                   <span>{service.deliveryTime} day delivery</span>
               </div>
               <Button className="w-full" size="lg">Continue (₹{service.price})</Button>
+               {user && user.uid !== service.freelancerId && (
+                <AddReviewDialog service={service} onReviewAdded={handleReviewAdded}>
+                    <Button variant="outline" className="w-full mt-4">Leave a Review</Button>
+                </AddReviewDialog>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { PlusCircle, Star, Clock } from "lucide-react";
+import { PlusCircle, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { getServices } from '@/lib/firebase/firestore';
@@ -135,9 +135,10 @@ export default function ServicesPage() {
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between items-center p-4 pt-0">
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Clock className="w-4 h-4 mr-1" />
-                  {service.deliveryTime} day{service.deliveryTime > 1 ? 's' : ''}
+                 <div className="flex items-center">
+                  <Star className="w-4 h-4 text-yellow-500 mr-1" />
+                  <span className="font-semibold text-sm">{service.rating > 0 ? service.rating.toFixed(1) : 'New'}</span>
+                  <span className="text-sm text-muted-foreground ml-1">({service.reviewsCount})</span>
                 </div>
                 <div className="text-lg font-bold">
                   ₹{service.price}

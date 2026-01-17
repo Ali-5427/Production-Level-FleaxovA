@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Star } from "lucide-react";
 
 export default function ProfilePage() {
     const { user, profile, updateProfile } = useAuth();
@@ -69,12 +70,12 @@ export default function ProfilePage() {
             <Card>
                 <CardContent className="pt-6">
                     <form className="space-y-8" onSubmit={handleSubmit}>
-                        <div className="flex items-center gap-6">
+                        <div className="flex flex-col md:flex-row items-center gap-6">
                             <Avatar className="h-24 w-24">
                                 <AvatarImage src={avatarPreview} />
                                 <AvatarFallback>{profile?.fullName?.charAt(0) || 'U'}</AvatarFallback>
                             </Avatar>
-                            <div className="space-y-2">
+                            <div className="flex-1 w-full space-y-2">
                                 <Label htmlFor="avatar-file">Update Profile Picture</Label>
                                 <Input 
                                     id="avatar-file" 
@@ -97,17 +98,30 @@ export default function ProfilePage() {
                                 <Input id="email" type="email" value={user?.email || ''} disabled />
                             </div>
                         </div>
+                        
+                        {profile?.role === 'freelancer' && (
+                             <div className="space-y-2">
+                                <Label>Overall Rating</Label>
+                                <div className="flex items-center gap-2">
+                                    <Star className="w-5 h-5 text-yellow-500" />
+                                    <span className="font-bold">{profile.rating.toFixed(1)}</span>
+                                    <span className="text-muted-foreground">({profile.reviewsCount} reviews)</span>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             <Label htmlFor="bio">Bio</Label>
                             <Textarea id="bio" rows={4} value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Tell us about yourself..." disabled={isLoading}/>
                         </div>
                         
-                        <div className="space-y-2">
-                            <Label htmlFor="skills">Skills</Label>
-                            <Input id="skills" value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="e.g. React, Next.js, Figma" disabled={isLoading}/>
-                            <p className="text-sm text-muted-foreground">Comma-separated list of your top skills.</p>
-                        </div>
+                        {profile?.role === 'freelancer' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="skills">Skills</Label>
+                                <Input id="skills" value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="e.g. React, Next.js, Figma" disabled={isLoading}/>
+                                <p className="text-sm text-muted-foreground">Comma-separated list of your top skills.</p>
+                            </div>
+                        )}
 
                         <div className="flex justify-end">
                             <Button type="submit" disabled={isLoading}>
