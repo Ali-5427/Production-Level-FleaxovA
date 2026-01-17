@@ -58,25 +58,31 @@ export interface Service {
 export interface Job {
   id: string;
   clientId: string; 
+  clientName: string;
   title: string;
   description: string;
   category: string;
   budget: number;
   skills: string[];
-  deadline: Date;
+  deadline: any; // Can be Date or Firestore Timestamp
   status: 'open' | 'assigned' | 'completed' | 'cancelled';
   assignedFreelancerId?: string | null;
-  createdAt: Date;
+  createdAt: any; // Can be Date or Firestore Timestamp
+  applicationCount: number;
 }
 
 // Corresponds to the 'applications' collection
 export interface Application {
   id: string;
   jobId: string;
+  jobTitle: string;
+  clientId: string;
   freelancerId: string;
+  freelancerName: string;
+  freelancerAvatarUrl?: string;
   coverLetter: string;
   bidAmount: number;
-  createdAt: Date;
+  createdAt: any; // Firestore Timestamp
   status: 'pending' | 'accepted' | 'rejected';
 }
 

@@ -1,25 +1,87 @@
 
 "use client"
+
+import { useEffect, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getJobById, getUser, getApplicationsForJob } from '@/lib/firebase/firestore';
+import type { Job, User, Application } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/hooks/use-auth';
+import { format } from 'date-fns';
+import { ApplyToJobDialog } from '@/components/jobs/ApplyToJobDialog';
+import { Users } from 'lucide-react';
+import Link from 'next/link';
 
-export default function JobDetailPage({ params }: { params: { id: string } }) {
-    const job = {
-        id: '1',
-        title: 'Looking for a React Developer for a short-term project',
-        budget: 500,
-        skills: ['React', 'TypeScript', 'Next.js', 'Tailwind CSS'],
-        description: 'We need an experienced React developer to help us build a new feature for our e-commerce platform. The project involves creating a new product comparison tool. The ideal candidate should have strong experience with modern frontend technologies and be able to work independently.',
-        client: {
-            name: 'John Doe',
-            avatar: 'https://picsum.photos/seed/client1/100/100',
-            rating: 4.8,
-            reviews: 25,
+export default function DashboardJobDetailPage({ params }: { params: { id: string } }) {
+    const { user, profile } = useAuth();
+    const [job, setJob] = useState<Job | null>(null);
+    const [client, setClient] = useState<User | null>(null);
+    const [applications, setApplications] = useState<Application[]>([]);
+    const [hasApplied, setHasApplied] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchJobData = async () => {
+            setLoading(true);
+            const fetchedJob = await getJobById(params.id);
+            setJob(fetchedJob);
+
+            if (fetchedJob) {
+                const [fetchedClient, fetchedApplications] = await Promise.all([
+                    getUser(fetchedJob.clientId),
+                    getApplicationsForJob(fetchedJob.id),
+                ]);
+                setClient(fetchedClient);
+                setApplications(fetchedApplications);
+                if (user) {
+                    setHasApplied(fetchedApplications.some(app => app.freelancerId === user.uid));
+                }
+            }
+            setLoading(false);
+        };
+        fetchJobData();
+    }, [params.id, user]);
+
+
+    if (loading) {
+        return (
+            <div className="container mx-auto px-4 py-8">
+                <Skeleton className="h-8 w-3/4 mb-6" />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                    <div className="lg:col-span-2 space-y-6">
+                        <Skeleton className="h-48 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                    </div>
+                    <div className="lg:col-span-1 space-y-6">
+                        <Skeleton className="h-32 w-full" />
+                        <Skeleton className="h-32 w-full" />
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    if (!job) {
+        return <div className="container mx-auto px-4 py-8 text-center">Job not found.</div>;
+    }
+
+    const isClientOwner = profile?.role === 'client' && profile.id === job.clientId;
+
+    const renderApplyButton = () => {
+        if (profile?.role !== 'freelancer') return null;
+        if (hasApplied) {
+            return <Button className="w-full mt-4" disabled>Already Applied</Button>
         }
-    };
-
+        return (
+            <ApplyToJobDialog job={job}>
+                <Button className="w-full mt-4">Apply Now</Button>
+            </ApplyToJobDialog>
+        );
+    }
+    
     return (
         <div className="container mx-auto px-4 py-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -27,11 +89,11 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-3xl">{job.title}</CardTitle>
-                            <CardDescription>Posted by {job.client.name}</CardDescription>
+                            <CardDescription>Posted by {job.clientName}</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <h2 className="text-2xl font-bold mb-4">Job Description</h2>
-                            <p className="text-muted-foreground leading-relaxed mb-6">{job.description}</p>
+                            <p className="text-muted-foreground leading-relaxed mb-6 whitespace-pre-wrap">{job.description}</p>
                             
                             <h3 className="text-xl font-semibold mb-3">Required Skills</h3>
                             <div className="flex flex-wrap gap-2">
@@ -43,30 +105,48 @@ export default function JobDetailPage({ params }: { params: { id: string } }) {
                 <div className="lg:col-span-1 space-y-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Project Budget</CardTitle>
+                            <CardTitle>Project Details</CardTitle>
                         </CardHeader>
-                        <CardContent>
-                            <p className="text-3xl font-bold">${job.budget}</p>
-                            <Button className="w-full mt-4">Apply Now</Button>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>About the Client</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex items-center gap-4">
-                            <Avatar className="h-16 w-16">
-                                <AvatarImage src={job.client.avatar} />
-                                <AvatarFallback>{job.client.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
+                        <CardContent className="space-y-4">
                             <div>
-                                <p className="font-bold">{job.client.name}</p>
-                                <p className="text-sm text-muted-foreground">Rating: {job.client.rating} ({job.client.reviews} reviews)</p>
+                                <p className="text-sm text-muted-foreground">Budget</p>
+                                <p className="text-2xl font-bold">${job.budget}</p>
                             </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Deadline</p>
+                                <p className="font-semibold">{format(new Date(job.deadline), 'PPP')}</p>
+                            </div>
+                            <div>
+                                 <p className="text-sm text-muted-foreground">Applications</p>
+                                <p className="font-semibold flex items-center"><Users className="mr-2 h-4 w-4"/> {job.applicationCount}</p>
+                            </div>
+                             {isClientOwner ? (
+                                <Button asChild className="w-full mt-4">
+                                    <Link href={`/dashboard/my-jobs/${job.id}/applications`}>View Applications</Link>
+                                </Button>
+                            ) : renderApplyButton()}
                         </CardContent>
                     </Card>
+                    {client && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>About the Client</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex items-center gap-4">
+                                <Avatar className="h-16 w-16">
+                                    <AvatarImage src={client.avatarUrl} />
+                                    <AvatarFallback>{client.fullName.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <p className="font-bold">{client.fullName}</p>
+                                    <p className="text-sm text-muted-foreground">Rating: {client.rating.toFixed(1)} ({client.reviewsCount} reviews)</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             </div>
         </div>
     )
 }
+

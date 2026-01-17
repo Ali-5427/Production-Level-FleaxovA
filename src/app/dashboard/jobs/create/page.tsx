@@ -2,7 +2,7 @@
 "use client"
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
@@ -14,12 +14,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/date-picker';
+import { categories } from '@/lib/categories';
 
 const jobSchema = z.object({
     title: z.string().min(10, "Title must be at least 10 characters").max(100, "Title must be less than 100 characters"),
     description: z.string().min(30, "Description must be at least 30 characters"),
     budget: z.coerce.number().min(5, "Budget must be at least $5"),
     skills: z.string().min(1, "At least one skill is required"),
+    category: z.string().min(1, "Category is required"),
+    deadline: z.date({ required_error: "A deadline is required." }),
 });
 
 type JobFormValues = z.infer<typeof jobSchema>;
@@ -27,7 +32,7 @@ type JobFormValues = z.infer<typeof jobSchema>;
 export default function CreateJobPage() {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
-    const { user } = useAuth();
+    const { user, profile } = useAuth();
     const { toast } = useToast();
 
     const form = useForm<JobFormValues>({
@@ -35,13 +40,14 @@ export default function CreateJobPage() {
         defaultValues: {
             title: '',
             description: '',
-            budget: 5,
+            budget: 100,
             skills: '',
+            category: '',
         }
     });
 
     const onSubmit = async (values: JobFormValues) => {
-        if (!user) {
+        if (!user || !profile) {
             toast({ title: "Authentication Error", description: "You must be logged in to post a job.", variant: "destructive" });
             return;
         }
@@ -49,14 +55,13 @@ export default function CreateJobPage() {
         setIsLoading(true);
         try {
             await createJob({
-                title: values.title,
-                description: values.description,
-                budget: values.budget,
+                ...values,
                 skills: values.skills.split(',').map(skill => skill.trim()).filter(Boolean),
                 clientId: user.uid,
+                clientName: profile.fullName,
             });
             toast({ title: "Job Posted!", description: "Your job is now live on the job board." });
-            router.push('/dashboard/jobs');
+            router.push('/dashboard/my-jobs');
         } catch (error) {
             console.error("Job posting failed:", error);
             toast({ title: "Error", description: "Failed to post job. Please try again.", variant: "destructive" });
@@ -116,7 +121,29 @@ export default function CreateJobPage() {
                                         </FormItem>
                                     )}
                                 />
-                               <FormField
+                                 <FormField
+                                    control={form.control}
+                                    name="category"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Category</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a category" />
+                                            </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                            {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                 <FormField
                                     control={form.control}
                                     name="skills"
                                     render={({ field }) => (
@@ -125,6 +152,17 @@ export default function CreateJobPage() {
                                             <FormControl>
                                                 <Input placeholder="e.g., React, TypeScript, Node.js" {...field} />
                                             </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <Controller
+                                    control={form.control}
+                                    name="deadline"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                            <FormLabel className="mb-2">Application Deadline</FormLabel>
+                                            <DatePicker date={field.value} setDate={field.onChange} />
                                             <FormMessage />
                                         </FormItem>
                                     )}

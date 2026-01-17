@@ -16,6 +16,7 @@ import {
 import {
   Bell,
   Briefcase,
+  FileText,
   LayoutGrid,
   LogOut,
   Mail,
@@ -69,23 +70,52 @@ export default function DashboardLayout({
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
+              
+              {/* Freelancer specific links */}
               {profile?.role === 'freelancer' && (
-                <SidebarMenuItem>
-                  <Link href="/dashboard/services" passHref>
-                    <SidebarMenuButton asChild tooltip="My Services" isActive={pathname.startsWith('/dashboard/services')}>
-                      <span>
-                        <Briefcase />
-                        My Services
-                      </span>
-                    </SidebarMenuButton>
-                  </Link>
-                </SidebarMenuItem>
+                <>
+                  <SidebarMenuItem>
+                    <Link href="/dashboard/services" passHref>
+                      <SidebarMenuButton asChild tooltip="My Services" isActive={pathname.startsWith('/dashboard/services')}>
+                        <span>
+                          <Briefcase />
+                          My Services
+                        </span>
+                      </SidebarMenuButton>
+                    </Link>
+                  </SidebarMenuItem>
+                   <SidebarMenuItem>
+                    <Link href="/dashboard/my-applications" passHref>
+                      <SidebarMenuButton asChild tooltip="My Applications" isActive={pathname.startsWith('/dashboard/my-applications')}>
+                        <span>
+                          <FileText />
+                          My Applications
+                        </span>
+                      </SidebarMenuButton>
+                    </Link>
+                  </SidebarMenuItem>
+                </>
               )}
+
+               {/* Client specific links */}
+              {profile?.role === 'client' && (
+                  <SidebarMenuItem>
+                    <Link href="/dashboard/my-jobs" passHref>
+                      <SidebarMenuButton asChild tooltip="My Jobs" isActive={pathname.startsWith('/dashboard/my-jobs')}>
+                        <span>
+                          <Briefcase />
+                          My Jobs
+                        </span>
+                      </SidebarMenuButton>
+                    </Link>
+                  </SidebarMenuItem>
+              )}
+
               <SidebarMenuItem>
                 <Link href="/dashboard/jobs" passHref>
                   <SidebarMenuButton asChild tooltip="Find Jobs" isActive={pathname.startsWith('/dashboard/jobs')}>
                     <span>
-                      <Briefcase />
+                      <Search />
                       Find Jobs
                     </span>
                   </SidebarMenuButton>

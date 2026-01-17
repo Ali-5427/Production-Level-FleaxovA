@@ -10,6 +10,7 @@ import Link from "next/link";
 import { getJobs } from '@/lib/firebase/firestore';
 import type { Job } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { format, formatDistanceToNow } from 'date-fns';
 
 export default function JobsPage() {
   const { user } = useAuth();
@@ -34,12 +35,14 @@ export default function JobsPage() {
     <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold">Job Board</h1>
-            <Button asChild>
-                <Link href={user ? "/dashboard/jobs/create" : "/register"}>
-                    <PlusCircle className="mr-2" />
-                    Post a Job
-                </Link>
-            </Button>
+            {user?.uid && (
+                <Button asChild>
+                    <Link href={user.uid ? "/dashboard/jobs/create" : "/register"}>
+                        <PlusCircle className="mr-2" />
+                        Post a Job
+                    </Link>
+                </Button>
+            )}
         </div>
         {loading ? (
            <div className="space-y-6">
@@ -71,7 +74,9 @@ export default function JobsPage() {
                             <Link href={`/jobs/${job.id}`}>
                                 <CardTitle className="hover:text-primary transition-colors">{job.title}</CardTitle>
                             </Link>
-                            <CardDescription>Budget: ${job.budget}</CardDescription>
+                            <CardDescription>
+                                Posted by {job.clientName} &middot; Budget: ${job.budget} &middot; Deadline: {format(new Date(job.deadline), 'PPP')}
+                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <p className="text-muted-foreground line-clamp-2">{job.description}</p>
