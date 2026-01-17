@@ -81,7 +81,7 @@ export default function DashboardLayout({
                 return (
                   <SidebarMenuItem key={link.href}>
                     <SidebarMenuButton asChild tooltip={link.label} isActive={getIsActive(link.href)}>
-                      <Link href={link.href} passHref>
+                      <Link href={link.href}>
                         {link.icon}
                         {link.label}
                       </Link>
@@ -168,5 +168,3 @@ export default function DashboardLayout({
     </MessageProvider>
   );
 }
-
-    
