@@ -92,12 +92,6 @@ let memoryState: MessageState = {
     selectedConversationId: null,
 };
 
-// Set initial selection without triggering read logic
-if (memoryState.conversations.length > 0) {
-    memoryState.selectedConversationId = memoryState.conversations[0].id;
-}
-
-
 function dispatch(action: Action) {
   memoryState = reducer(memoryState, action);
   listeners.forEach((listener) => {
@@ -119,12 +113,12 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         listeners.push(setState);
-        // Set initial state without marking as read
-        const initialState = {...memoryState};
-        if (initialState.conversations.length > 0 && !initialState.selectedConversationId) {
-            initialState.selectedConversationId = initialState.conversations[0].id;
+        // Set initial state without marking as read, but select the first conversation
+        if (memoryState.conversations.length > 0 && !memoryState.selectedConversationId) {
+            // This just sets the initial view, it doesn't run the 'read' logic
+            memoryState.selectedConversationId = memoryState.conversations[0].id;
         }
-        setState(initialState);
+        setState({...memoryState}); // Ensure component has the initial state
         
         return () => {
             const index = listeners.indexOf(setState);
