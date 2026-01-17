@@ -1,13 +1,71 @@
 
 "use client"
 
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
+import { createService } from '@/lib/firebase/firestore';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+const serviceSchema = z.object({
+    title: z.string().min(10, "Title must be at least 10 characters").max(100, "Title must be less than 100 characters"),
+    description: z.string().min(30, "Description must be at least 30 characters"),
+    price: z.coerce.number().min(5, "Price must be at least $5"),
+    category: z.string().min(3, "Category is required"),
+    tags: z.string().optional(),
+});
+
+type ServiceFormValues = z.infer<typeof serviceSchema>;
 
 export default function CreateServicePage() {
+    const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter();
+    const { user } = useAuth();
+    const { toast } = useToast();
+
+    const form = useForm<ServiceFormValues>({
+        resolver: zodResolver(serviceSchema),
+        defaultValues: {
+            title: '',
+            description: '',
+            price: 5,
+            category: '',
+            tags: ''
+        }
+    });
+
+    const onSubmit = async (values: ServiceFormValues) => {
+        if (!user) {
+            toast({ title: "Authentication Error", description: "You must be logged in to create a service.", variant: "destructive" });
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            await createService({
+                ...values,
+                tags: values.tags?.split(',').map(tag => tag.trim()).filter(Boolean) || [],
+                sellerId: user.uid,
+            });
+            toast({ title: "Service Created!", description: "Your service is now live on the marketplace." });
+            router.push('/dashboard/services');
+        } catch (error) {
+            console.error("Service creation failed:", error);
+            toast({ title: "Error", description: "Failed to create service. Please try again.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <div className="container mx-auto px-4 py-8">
             <Card className="max-w-3xl mx-auto">
@@ -16,33 +74,87 @@ export default function CreateServicePage() {
                     <CardDescription>Fill out the details below to list your service on the marketplace.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form className="space-y-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="title">Service Title</Label>
-                            <Input id="title" placeholder="e.g., I will design a modern minimalist logo" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="description">Description</Label>
-                            <Textarea id="description" placeholder="Describe your service in detail..." rows={6} />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="price">Price (₹)</Label>
-                                <Input id="price" type="number" placeholder="e.g., 500" min="100" />
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                            <FormField
+                                control={form.control}
+                                name="title"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Service Title</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g., I will design a modern minimalist logo" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="description"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Description</FormLabel>
+                                        <FormControl>
+                                            <Textarea placeholder="Describe your service in detail..." rows={6} {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                               <FormField
+                                    control={form.control}
+                                    name="price"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Price ($)</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" min="5" placeholder="e.g., 50" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="category"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Category</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g., Graphic Design" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="category">Category</Label>
-                                <Input id="category" placeholder="e.g., Graphic Design" />
+                             <FormField
+                                control={form.control}
+                                name="tags"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Tags (comma-separated)</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g., logo design, branding" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <div className="space-y-2">
+                                <Label htmlFor="image">Image (Optional)</Label>
+                                <Input id="image" type="file" disabled />
+                                <p className="text-sm text-muted-foreground">Image uploads are not yet implemented.</p>
                             </div>
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="image">Image</Label>
-                            <Input id="image" type="file" />
-                        </div>
-                        <Button type="submit" className="w-full">Create Service</Button>
-                    </form>
+                            <Button type="submit" className="w-full" disabled={isLoading}>
+                                {isLoading ? 'Creating...' : 'Create Service'}
+                            </Button>
+                        </form>
+                    </Form>
                 </CardContent>
             </Card>
         </div>
-    )
+    );
 }

@@ -1,37 +1,35 @@
 
 "use client"
+import { useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { PlusCircle } from "lucide-react";
 import Link from "next/link";
+import { getJobs } from '@/lib/firebase/firestore';
+import type { Job } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function JobsPage() {
   const { user } = useAuth();
-  const jobs = [
-    {
-      id: '1',
-      title: 'Looking for a React Developer for a short-term project',
-      budget: 500,
-      skills: ['React', 'TypeScript', 'Next.js'],
-      description: 'We need an experienced React developer to help us build a new feature for our e-commerce platform...'
-    },
-    {
-      id: '2',
-      title: 'UI/UX Designer Needed for Mobile App',
-      budget: 800,
-      skills: ['Figma', 'UI/UX', 'Mobile Design'],
-      description: 'Seeking a talented designer to create a modern and intuitive interface for our new fitness application.'
-    },
-    {
-        id: '3',
-        title: 'Backend Engineer (Node.js/Express) for API development',
-        budget: 1200,
-        skills: ['Node.js', 'Express', 'MongoDB'],
-        description: 'We are looking to hire a backend engineer to develop and maintain our RESTful APIs.'
-    },
-  ];
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const fetchedJobs = await getJobs();
+        setJobs(fetchedJobs);
+      } catch (error) {
+        console.error("Failed to fetch jobs:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchJobs();
+  }, []);
+
   return (
     <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
@@ -43,29 +41,53 @@ export default function JobsPage() {
                 </Link>
             </Button>
         </div>
-        <div className="space-y-6">
-            {jobs.map(job => (
-                <Card key={job.id}>
-                    <CardHeader>
-                        <Link href={`/jobs/${job.id}`}>
-                            <CardTitle className="hover:text-primary transition-colors">{job.title}</CardTitle>
-                        </Link>
-                        <CardDescription>Budget: ${job.budget}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground line-clamp-2">{job.description}</p>
-                    </CardContent>
-                    <CardFooter className="flex justify-between">
-                        <div className="flex gap-2 flex-wrap">
-                            {job.skills.map(skill => <Badge key={skill} variant="secondary">{skill}</Badge>)}
-                        </div>
-                        <Button variant="outline" asChild>
-                            <Link href={`/jobs/${job.id}`}>View Details</Link>
-                        </Button>
-                    </CardFooter>
-                </Card>
+        {loading ? (
+           <div className="space-y-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/4 mt-2" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3 mt-2" />
+                </CardContent>
+                <CardFooter className="flex justify-between">
+                    <div className="flex gap-2">
+                        <Skeleton className="h-6 w-20" />
+                        <Skeleton className="h-6 w-20" />
+                    </div>
+                    <Skeleton className="h-10 w-28" />
+                </CardFooter>
+              </Card>
             ))}
-        </div>
+           </div>
+        ) : (
+            <div className="space-y-6">
+                {jobs.map(job => (
+                    <Card key={job.id}>
+                        <CardHeader>
+                            <Link href={`/jobs/${job.id}`}>
+                                <CardTitle className="hover:text-primary transition-colors">{job.title}</CardTitle>
+                            </Link>
+                            <CardDescription>Budget: ${job.budget}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground line-clamp-2">{job.description}</p>
+                        </CardContent>
+                        <CardFooter className="flex justify-between">
+                            <div className="flex gap-2 flex-wrap">
+                                {job.skills.map(skill => <Badge key={skill} variant="secondary">{skill}</Badge>)}
+                            </div>
+                            <Button variant="outline" asChild>
+                                <Link href={`/jobs/${job.id}`}>View Details</Link>
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                ))}
+            </div>
+        )}
     </div>
   )
 }

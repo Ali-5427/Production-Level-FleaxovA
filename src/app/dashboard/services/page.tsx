@@ -1,62 +1,38 @@
 
 "use client"
 
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { PlusCircle, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { getServices } from '@/lib/firebase/firestore';
+import type { Service } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ServicesPage() {
   const { user } = useAuth();
-  const getImage = (hint: string) => {
-    return PlaceHolderImages.find(img => img.imageHint === hint) || { imageUrl: "https://picsum.photos/seed/placeholder/600/400", imageHint: "placeholder" };
-  }
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const services = [
-    {
-      id: "1",
-      title: "I will design a modern minimalist logo",
-      author: "CreativeGuy",
-      rating: 4.9,
-      reviews: 120,
-      price: 50,
-      image: "https://storage.googleapis.com/aifirebase/scenarios/fleaxova/A_black_monogram_logo_that_creatively_combines_the_letters_A_and_X_in_a_minimalist_style._The_logo_is_embossed_on_a_textured_white_paper_background_with_the_text_AURORA_DESIGNS_underneath._The_lighting_is_soft_and_natural_creating_a_professional_and_elegant_feel._.jpeg",
-      imageHint: "logo design",
-    },
-    {
-      id: "2",
-      title: "I will develop a responsive WordPress website",
-      author: "WebAppWizard",
-      rating: 5.0,
-      reviews: 88,
-      price: 250,
-      image: getImage("website development").imageUrl,
-      imageHint: getImage("website development").imageHint,
-    },
-    {
-      id: "3",
-      title: "I will write SEO-friendly blog posts",
-      author: "WordSmith",
-      rating: 4.8,
-      reviews: 250,
-      price: 25,
-      image: getImage("content writing").imageUrl,
-      imageHint: getImage("content writing").imageHint,
-    },
-    {
-        id: "4",
-        title: "I will create a stunning video animation",
-        author: "MotionMaster",
-        rating: 4.9,
-        reviews: 75,
-        price: 300,
-        image: getImage("video animation").imageUrl,
-        imageHint: getImage("video animation").imageHint,
-    }
-  ];
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const fetchedServices = await getServices();
+        setServices(fetchedServices);
+      } catch (error) {
+        console.error("Failed to fetch services:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServices();
+  }, []);
+  
+  const placeholderImage = "https://picsum.photos/seed/placeholder/600/400";
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -69,40 +45,58 @@ export default function ServicesPage() {
             </Link>
         </Button>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {services.map((service) => (
-          <Card key={service.id}>
-            <CardHeader className="p-0">
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <Skeleton className="rounded-t-lg aspect-video" />
+              <CardContent className="p-4">
+                <Skeleton className="h-5 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-1/2" />
+              </CardContent>
+              <CardFooter className="p-4 pt-0 flex justify-between">
+                <Skeleton className="h-5 w-1/4" />
+                <Skeleton className="h-5 w-1/4" />
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {services.map((service) => (
+            <Card key={service.id}>
+              <CardHeader className="p-0">
+                  <Link href={`/dashboard/services/${service.id}`}>
+                      <Image 
+                        src={service.imageUrl || placeholderImage} 
+                        alt={service.title} 
+                        width={600} 
+                        height={400} 
+                        className="rounded-t-lg object-cover aspect-video"
+                      />
+                  </Link>
+              </CardHeader>
+              <CardContent className="p-4">
                 <Link href={`/dashboard/services/${service.id}`}>
-                    <Image 
-                      src={service.image} 
-                      alt={service.title} 
-                      width={600} 
-                      height={400} 
-                      className="rounded-t-lg object-cover aspect-video" 
-                      data-ai-hint={service.imageHint}
-                    />
+                  <CardTitle className="text-lg font-semibold hover:text-primary transition-colors line-clamp-2">{service.title}</CardTitle>
                 </Link>
-            </CardHeader>
-            <CardContent className="p-4">
-              <Link href={`/dashboard/services/${service.id}`}>
-                <CardTitle className="text-lg font-semibold hover:text-primary transition-colors">{service.title}</CardTitle>
-              </Link>
-              <p className="text-sm text-muted-foreground mt-1">by {service.author}</p>
-            </CardContent>
-            <CardFooter className="flex justify-between items-center p-4 pt-0">
-              <div className="flex items-center">
-                <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                <span className="font-semibold">{service.rating}</span>
-                <span className="text-sm text-muted-foreground ml-1">({service.reviews})</span>
-              </div>
-              <div className="text-lg font-bold">
-                ${service.price}
-              </div>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+                {/* We'll need to fetch author details later */}
+                {/* <p className="text-sm text-muted-foreground mt-1">by {service.author}</p> */}
+              </CardContent>
+              <CardFooter className="flex justify-between items-center p-4 pt-0">
+                <div className="flex items-center">
+                  <Star className="w-4 h-4 text-yellow-500 mr-1" />
+                  <span className="font-semibold">{service.rating.toFixed(1)}</span>
+                  <span className="text-sm text-muted-foreground ml-1">({service.reviewsCount})</span>
+                </div>
+                <div className="text-lg font-bold">
+                  ${service.price}
+                </div>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
