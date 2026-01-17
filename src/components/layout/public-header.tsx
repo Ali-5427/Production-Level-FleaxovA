@@ -18,6 +18,7 @@ import {
   SheetContent,
   SheetTrigger,
   SheetClose,
+  SheetTitle,
 } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
 
@@ -141,6 +142,7 @@ export function PublicHeader() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="right">
+                <SheetTitle className="sr-only">Mobile Navigation</SheetTitle>
                 <SheetClose asChild>
                   <Link href="/" className="text-2xl font-bold text-primary">
                     Fleaxova
