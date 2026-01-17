@@ -49,6 +49,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 if (userDoc.exists()) {
                     setProfile(userDoc.data() as User);
                 } else {
+                    // This case handles a user that exists in Auth but not Firestore.
+                    // It can happen during initial sign-up before the Firestore doc is created.
+                    // We'll wait for the profile to be created elsewhere.
                     setProfile(null); 
                 }
                 setUser(firebaseUser);
@@ -66,14 +69,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (loading) return;
 
         const publicOnlyPaths = ['/signin', '/register'];
-        const isPublicHomepage = pathname === '/';
         const isProtectedPath = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
 
         if (user) {
-            if (publicOnlyPaths.includes(pathname) || isPublicHomepage) {
+            // If user is logged in, and tries to access a public-only page, redirect to dashboard.
+             if (publicOnlyPaths.includes(pathname)) {
                  router.push('/dashboard');
             }
         } else {
+            // If user is not logged in and tries to access a protected path, redirect to signin.
             if (isProtectedPath) {
                 router.push('/signin');
             }
@@ -98,6 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             const userCredential = await firebaseLogin(email, password);
             toast({ title: "Login Successful", description: "Welcome back!" });
+            router.push('/dashboard'); // Manually redirect on successful login
             return userCredential;
         } catch (error: any) {
             let description = "An unexpected error occurred.";
@@ -119,6 +124,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             const userCredential = await firebaseRegister(email, password, fullName, isSeller);
             toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
+            router.push('/dashboard'); // Manually redirect on successful registration
             return userCredential;
         } catch (error: any) {
              let description = "An unexpected error occurred.";
@@ -161,6 +167,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setProfile(newUser);
             }
             toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
+            router.push('/dashboard'); // Manually redirect
 
         } catch (error: any) {
              toast({
@@ -176,6 +183,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             await signInWithGoogle();
             toast({ title: "Login Successful", description: "Welcome back!" });
+            router.push('/dashboard'); // Manually redirect
         } catch (error: any) {
             toast({
                 title: "Login Failed",
@@ -220,13 +228,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updateProfile: handleUpdateProfile,
     };
 
-    if (loading) {
-        return <div className="flex items-center justify-center h-screen bg-background">Loading...</div>;
-    }
-
     return (
         <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );
 };
+
+    

@@ -29,11 +29,11 @@ export default function RootLayout({
       <head />
       <body className="font-sans antialiased">
         <AuthProvider>
-          <div className="flex min-h-screen flex-col">
-            {!isDashboard && <PublicHeader />}
-            <main className="flex-grow">{children}</main>
-          </div>
-          <Toaster />
+            <div className="flex min-h-screen flex-col">
+                {!isDashboard && <PublicHeader />}
+                <main className="flex-grow">{children}</main>
+            </div>
+            <Toaster />
         </AuthProvider>
         <SpeedInsights />
         <Analytics />
@@ -41,3 +41,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    

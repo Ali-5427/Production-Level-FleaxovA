@@ -23,6 +23,8 @@ import {
   Settings,
   User,
   Wallet,
+  Search,
+  Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -36,7 +38,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
 import { MessageProvider } from '@/context/MessageContext';
@@ -46,8 +47,23 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, profile, logout } = useAuth();
+  const { user, profile, logout, loading } = useAuth();
   const pathname = usePathname();
+
+  const getIsActive = (path: string) => {
+    if (path === '/dashboard') return pathname === path;
+    return pathname.startsWith(path);
+  }
+
+  const navLinks = [
+    { href: "/dashboard", label: "Dashboard", icon: <LayoutGrid />, roles: ["client", "freelancer", "admin"] },
+    { href: "/dashboard/services", label: "My Services", icon: <Briefcase />, roles: ["freelancer"] },
+    { href: "/dashboard/my-applications", label: "My Applications", icon: <FileText />, roles: ["freelancer"] },
+    { href: "/dashboard/my-jobs", label: "My Jobs", icon: <Briefcase />, roles: ["client"] },
+    { href: "/dashboard/jobs", label: "Find Jobs", icon: <Search />, roles: ["client", "freelancer"] },
+    { href: "/dashboard/messages", label: "Messages", icon: <Mail />, roles: ["client", "freelancer"] },
+    { href: "/dashboard/wallet", label: "Wallet", icon: <Wallet />, roles: ["client", "freelancer"] },
+  ];
 
   return (
     <MessageProvider>
@@ -60,100 +76,30 @@ export default function DashboardLayout({
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <Link href="/dashboard" passHref>
-                  <SidebarMenuButton asChild tooltip="Dashboard" isActive={pathname === '/dashboard'}>
-                    <span>
-                      <LayoutGrid />
-                      Dashboard
-                    </span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-              
-              {/* Freelancer specific links */}
-              {profile?.role === 'freelancer' && (
-                <>
-                  <SidebarMenuItem>
-                    <Link href="/dashboard/services" passHref>
-                      <SidebarMenuButton asChild tooltip="My Services" isActive={pathname.startsWith('/dashboard/services')}>
-                        <span>
-                          <Briefcase />
-                          My Services
-                        </span>
-                      </SidebarMenuButton>
-                    </Link>
+              {navLinks.map((link) => {
+                if (!profile || !link.roles.includes(profile.role)) return null;
+                return (
+                  <SidebarMenuItem key={link.href}>
+                    <SidebarMenuButton asChild tooltip={link.label} isActive={getIsActive(link.href)}>
+                      <Link href={link.href} passHref>
+                        {link.icon}
+                        {link.label}
+                      </Link>
+                    </SidebarMenuButton>
                   </SidebarMenuItem>
-                   <SidebarMenuItem>
-                    <Link href="/dashboard/my-applications" passHref>
-                      <SidebarMenuButton asChild tooltip="My Applications" isActive={pathname.startsWith('/dashboard/my-applications')}>
-                        <span>
-                          <FileText />
-                          My Applications
-                        </span>
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-                </>
-              )}
-
-               {/* Client specific links */}
-              {profile?.role === 'client' && (
-                  <SidebarMenuItem>
-                    <Link href="/dashboard/my-jobs" passHref>
-                      <SidebarMenuButton asChild tooltip="My Jobs" isActive={pathname.startsWith('/dashboard/my-jobs')}>
-                        <span>
-                          <Briefcase />
-                          My Jobs
-                        </span>
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-              )}
-
-              <SidebarMenuItem>
-                <Link href="/dashboard/jobs" passHref>
-                  <SidebarMenuButton asChild tooltip="Find Jobs" isActive={pathname.startsWith('/dashboard/jobs')}>
-                    <span>
-                      <Search />
-                      Find Jobs
-                    </span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <Link href="/dashboard/messages" passHref>
-                  <SidebarMenuButton asChild tooltip="Messages" isActive={pathname === '/dashboard/messages'}>
-                    <span>
-                      <Mail />
-                      Messages
-                    </span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <Link href="/dashboard/wallet" passHref>
-                  <SidebarMenuButton asChild tooltip="Wallet" isActive={pathname === '/dashboard/wallet'}>
-                    <span>
-                      <Wallet />
-                      Wallet
-                    </span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
             <SidebarMenu>
               <SidebarMenuItem>
-                <Link href="/dashboard/profile" passHref>
-                  <SidebarMenuButton asChild tooltip="Edit Profile" isActive={pathname === '/dashboard/profile'}>
-                    <span>
+                 <SidebarMenuButton asChild tooltip="Edit Profile" isActive={getIsActive('/dashboard/profile')}>
+                    <Link href="/dashboard/profile">
                       <User />
                       Edit Profile
-                    </span>
+                    </Link>
                   </SidebarMenuButton>
-                </Link>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton tooltip="Logout" onClick={logout}>
@@ -209,10 +155,18 @@ export default function DashboardLayout({
             </div>
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6">
-            {children}
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              children
+            )}
           </main>
         </SidebarInset>
       </SidebarProvider>
     </MessageProvider>
   );
 }
+
+    

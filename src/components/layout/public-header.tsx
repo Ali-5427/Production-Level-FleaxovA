@@ -21,6 +21,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Menu } from 'lucide-react';
+import { Separator } from '../ui/separator';
 
 export function PublicHeader() {
   const { user, profile, logout } = useAuth();
@@ -108,7 +109,7 @@ export function PublicHeader() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuLabel>{profile?.fullName || 'My Account'}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard">Dashboard</Link>
@@ -150,7 +151,7 @@ export function PublicHeader() {
                 </SheetClose>
                 <div className="mt-8 flex flex-col gap-6">
                   {navLinks}
-                  <DropdownMenuSeparator />
+                  <Separator />
                   {user ? (
                     <>
                       <SheetClose asChild>
@@ -168,7 +169,7 @@ export function PublicHeader() {
                   ) : (
                     <>
                       <SheetClose asChild>
-                        <Button variant="ghost" asChild>
+                        <Button variant="ghost" asChild className="justify-start">
                           <Link href="/signin">Log In</Link>
                         </Button>
                       </SheetClose>
@@ -188,3 +189,5 @@ export function PublicHeader() {
     </header>
   );
 }
+
+    
