@@ -34,7 +34,7 @@ export default function Home() {
           </div>
           <div className="relative h-80 w-full md:h-96">
             <Image
-              src="https://storage.googleapis.com/aifirebase/scenarios/fleaxova/A_flat_lay_of_a_creative_professional's_desk._On_the_wooden_surface_is_a_silver_laptop_a_DSLR_camera_and_lens_several_guitar_effect_pedals_a_small_cactus_in_a_pot_and_a_notebook_with_a_pen._The_lighting_is_even_and_the_composition_is_balanced_conveying_a_sense_of_creativity_and_professionalism._.jpeg"
+              src="https://storage.googleapis.com/aifirebase/scenarios/fleaxova/A_flat_lay_of_a_creative_professional%27s_desk._On_the_wooden_surface_is_a_silver_laptop_a_DSLR_camera_and_lens_several_guitar_effect_pedals_a_small_cactus_in_a_pot_and_a_notebook_with_a_pen._The_lighting_is_even_and_the_composition_is_balanced_conveying_a_sense_of_creativity_and_professionalism._.jpeg"
               alt="A creative professional's desk with a laptop, camera, and audio equipment"
               fill
               className="rounded-lg object-cover"
