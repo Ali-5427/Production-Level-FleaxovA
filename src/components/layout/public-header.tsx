@@ -94,6 +94,7 @@ export function PublicHeader() {
                     <Avatar>
                       <AvatarImage
                         src={
+                          profile?.avatarUrl ||
                           user.photoURL ||
                           'https://picsum.photos/seed/user-avatar/100/100'
                         }

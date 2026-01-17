@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -156,7 +155,7 @@ export default function DashboardLayout({
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar>
                       <AvatarImage
-                        src={user?.photoURL || "https://picsum.photos/seed/user-avatar/100/100"}
+                        src={profile?.avatarUrl || user?.photoURL || "https://picsum.photos/seed/user-avatar/100/100"}
                         alt="User Avatar"
                       />
                       <AvatarFallback>{profile?.fullName?.charAt(0) || 'U'}</AvatarFallback>

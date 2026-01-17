@@ -30,11 +30,11 @@ export default function ProfilePage() {
             setBio(profile.bio || '');
             setSkills(profile.skills?.join(', ') || '');
         }
-        if (user?.photoURL) {
-            setAvatarPreview(user.photoURL);
-        } else if (profile?.avatarUrl) {
-            setAvatarPreview(profile.avatarUrl);
-        }
+
+        // Determine avatar URL, prioritizing Firestore profile, then auth, then fallback.
+        const newAvatarUrl = profile?.avatarUrl || user?.photoURL || "https://picsum.photos/seed/user-avatar/200/200";
+        setAvatarPreview(newAvatarUrl);
+
     }, [profile, user]);
 
     const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
