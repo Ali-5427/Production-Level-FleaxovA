@@ -6,8 +6,11 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Briefcase, Search, Star, Zap, Users, ShieldCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function Home() {
+  const heroImage = PlaceHolderImages.find((img) => img.id === 'hero-main');
+
   return (
     <div className="bg-background text-foreground">
       {/* Hero Section */}
@@ -33,13 +36,19 @@ export default function Home() {
             </div>
           </div>
           <div className="relative h-80 w-full md:h-96">
-            <Image
-              src="https://images.unsplash.com/photo-1558259299-5d46c4408730?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHx3b3Jrc3BhY2UlMjBjcmVhdGl2ZXxlbnwwfHx8fDE3Njg2NTg0ODJ8MA&ixlib=rb-4.1.0&q=80&w=1080"
-              alt="A designer's desk with a laptop and creative tools"
-              fill
-              className="rounded-lg object-cover"
-              data-ai-hint="creative workspace"
-            />
+            {heroImage ? (
+                <Image
+                  src={heroImage.imageUrl}
+                  alt={heroImage.description}
+                  fill
+                  className="rounded-lg object-cover"
+                  data-ai-hint={heroImage.imageHint}
+                />
+              ) : (
+                <div className="w-full h-full bg-muted rounded-lg flex items-center justify-center">
+                  <p>Image not found</p>
+                </div>
+              )}
           </div>
         </section>
 

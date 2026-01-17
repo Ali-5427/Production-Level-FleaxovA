@@ -1,6 +1,12 @@
 {
   "placeholderImages": [
     {
+      "id": "hero-main",
+      "description": "A vibrant and creative workspace with a laptop, camera, and audio equipment, representing freelance opportunities.",
+      "imageUrl": "https://images.unsplash.com/photo-1558259299-5d46c4408730?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHx3b3Jrc3BhY2UlMjBjcmVhdGl2ZXxlbnwwfHx8fDE3Njg2NTg0ODJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "creative workspace"
+    },
+    {
       "id": "service-logo-design",
       "description": "A minimalist logo design.",
       "imageUrl": "https://storage.googleapis.com/aifirebase/scenarios/fleaxova/A_black_monogram_logo_that_creatively_combines_the_letters_A_and_X_in_a_minimalist_style._The_logo_is_embossed_on_a_textured_white_paper_background_with_the_text_AURORA_DESIGNS_underneath._The_lighting_is_soft_and_natural_creating_a_professional_and_elegant_feel._.jpeg",
