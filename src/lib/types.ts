@@ -8,22 +8,14 @@ export interface AuthUser {
 }
 
 // Corresponds to the 'users' collection in Firestore
-export interface UserAccount {
-  id: string; // User UID
-  name: string;
-  email: string;
-  role: "student" | "client" | "admin";
-  walletBalance: number;
-  createdAt: Date;
-  status: "active" | "suspended";
-}
-
-// Corresponds to the 'profiles' collection
-export interface Profile {
+export interface User {
   id: string; // User UID
   fullName: string;
   email: string;
-  isSeller: boolean;
+  role: "freelancer" | "client" | "admin";
+  walletBalance: number;
+  createdAt: any; // Firestore Timestamp
+  status: "active" | "suspended";
   title?: string;
   bio?: string;
   skills?: string[];

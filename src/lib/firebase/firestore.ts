@@ -13,7 +13,7 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { app } from "./config";
-import type { Service, Job, Profile } from '../types';
+import type { Service, Job, User } from '../types';
 
 // Initialize Firestore with long-polling enabled to prevent connection issues in some environments
 const db = initializeFirestore(app, {
@@ -24,7 +24,7 @@ const db = initializeFirestore(app, {
 const servicesCollection = collection(db, 'services');
 
 export async function createService(serviceData: Omit<Service, 'id' | 'createdAt' | 'rating' | 'reviewsCount' | 'freelancerName' | 'freelancerAvatarUrl'>) {
-    const sellerProfile = await getProfile(serviceData.freelancerId);
+    const sellerProfile = await getUser(serviceData.freelancerId);
     if (!sellerProfile) {
         throw new Error("Could not find seller profile to create service.");
     }
@@ -111,13 +111,13 @@ export async function getJobs(): Promise<Job[]> {
     });
 }
 
-// Profiles
-export async function getProfile(userId: string): Promise<Profile | null> {
+// Users
+export async function getUser(userId: string): Promise<User | null> {
     if (!userId) return null;
-    const profileDocRef = doc(db, 'profiles', userId);
-    const docSnap = await getDoc(profileDocRef);
+    const userDocRef = doc(db, 'users', userId);
+    const docSnap = await getDoc(userDocRef);
     if (docSnap.exists()) {
-        return { ...docSnap.data(), id: docSnap.id } as Profile;
+        return { ...docSnap.data(), id: docSnap.id } as User;
     }
     return null;
 }

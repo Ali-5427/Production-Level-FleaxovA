@@ -8,13 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Star, Clock } from "lucide-react";
 import Image from "next/image";
-import { getServiceById, getProfile } from "@/lib/firebase/firestore";
-import type { Service, Profile } from "@/lib/types";
+import { getServiceById, getUser } from "@/lib/firebase/firestore";
+import type { Service, User } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ServiceDetailPage({ params }: { params: { id: string } }) {
   const [service, setService] = useState<Service | null>(null);
-  const [seller, setSeller] = useState<Profile | null>(null);
+  const [seller, setSeller] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { id } = params;
 
@@ -26,7 +26,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
       const fetchedService = await getServiceById(id);
       setService(fetchedService);
       if (fetchedService) {
-        const fetchedSeller = await getProfile(fetchedService.freelancerId);
+        const fetchedSeller = await getUser(fetchedService.freelancerId);
         setSeller(fetchedSeller);
       }
       setLoading(false);

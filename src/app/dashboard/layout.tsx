@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -68,7 +69,7 @@ export default function DashboardLayout({
                   </SidebarMenuButton>
                 </Link>
               </SidebarMenuItem>
-              {profile?.isSeller && (
+              {profile?.role === 'freelancer' && (
                 <SidebarMenuItem>
                   <Link href="/dashboard/services" passHref>
                     <SidebarMenuButton asChild tooltip="My Services" isActive={pathname.startsWith('/dashboard/services')}>

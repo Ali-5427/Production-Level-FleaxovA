@@ -7,13 +7,13 @@ import {
     updateProfile as updateFirebaseProfile,
     GoogleAuthProvider,
     signInWithPopup,
-    User,
+    User as FirebaseAuthUser,
 } from "firebase/auth";
-import { doc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { app } from "./config";
 import { db } from "./firestore";
-import type { Profile } from '../types';
+import type { User } from '../types';
 import imageCompression from 'browser-image-compression';
 
 const auth = getAuth(app);
@@ -28,16 +28,19 @@ export async function register(email: string, password: string, fullName: string
         displayName: fullName,
     });
     
-    const profileData = {
+    const userData: User = {
         id: user.uid,
         fullName,
         email,
-        isSeller,
+        role: isSeller ? 'freelancer' : 'client',
+        walletBalance: 0,
+        createdAt: serverTimestamp(),
+        status: 'active',
         rating: 0,
         reviewsCount: 0,
     };
 
-    await setDoc(doc(db, "profiles", user.uid), profileData);
+    await setDoc(doc(db, "users", user.uid), userData);
 
     return userCredential;
 }
@@ -55,11 +58,11 @@ export async function signInWithGoogle() {
 }
 
 export async function updateUserProfile(
-    user: User, 
-    updates: Partial<Profile>, 
+    user: FirebaseAuthUser, 
+    updates: Partial<User>, 
     newAvatarFile?: File
-): Promise<Partial<Profile>> {
-    const profileDocRef = doc(db, "profiles", user.uid);
+): Promise<Partial<User>> {
+    const userDocRef = doc(db, "users", user.uid);
     let newAvatarUrl: string | undefined = undefined;
 
     if (newAvatarFile) {
@@ -81,7 +84,7 @@ export async function updateUserProfile(
         }
     }
 
-    const dataToUpdate: Partial<Profile> = { ...updates };
+    const dataToUpdate: Partial<User> = { ...updates };
     if (newAvatarUrl) {
         dataToUpdate.avatarUrl = newAvatarUrl;
     }
@@ -90,7 +93,7 @@ export async function updateUserProfile(
     Object.keys(dataToUpdate).forEach(key => (dataToUpdate as any)[key] === undefined && delete (dataToUpdate as any)[key]);
 
     if (Object.keys(dataToUpdate).length > 0) {
-        await updateDoc(profileDocRef, dataToUpdate);
+        await updateDoc(userDocRef, dataToUpdate);
     }
 
     const authProfileUpdates: { displayName?: string; photoURL?: string } = {};

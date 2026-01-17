@@ -3,8 +3,8 @@
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { getAuth, onAuthStateChanged, User as FirebaseAuthUser } from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { app } from '@/lib/firebase/config';
 import { db } from '@/lib/firebase/firestore';
 import { 
@@ -14,19 +14,19 @@ import {
     signInWithGoogle,
     updateUserProfile
 } from '@/lib/firebase/auth';
-import type { Profile } from '@/lib/types';
+import type { User } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
-    user: User | null;
-    profile: Profile | null;
+    user: FirebaseAuthUser | null;
+    profile: User | null;
     loading: boolean;
     login: typeof firebaseLogin;
     logout: () => Promise<void>;
     register: typeof firebaseRegister;
     registerWithGoogle: (isSeller: boolean) => Promise<void>;
     loginWithGoogle: () => Promise<void>;
-    updateProfile: (updates: Partial<Profile>, newAvatarFile?: File) => Promise<void>;
+    updateProfile: (updates: Partial<User>, newAvatarFile?: File) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,8 +34,8 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const auth = getAuth(app);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [profile, setProfile] = useState<Profile | null>(null);
+    const [user, setUser] = useState<FirebaseAuthUser | null>(null);
+    const [profile, setProfile] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
     const pathname = usePathname();
@@ -44,10 +44,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
-                const profileDocRef = doc(db, "profiles", firebaseUser.uid);
-                const profileDoc = await getDoc(profileDocRef);
-                if (profileDoc.exists()) {
-                    setProfile(profileDoc.data() as Profile);
+                const userDocRef = doc(db, "users", firebaseUser.uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    setProfile(userDoc.data() as User);
                 } else {
                     setProfile(null); 
                 }
@@ -141,21 +141,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const userCredential = await signInWithGoogle();
             const gUser = userCredential.user;
 
-            const profileDocRef = doc(db, "profiles", gUser.uid);
-            const profileDoc = await getDoc(profileDocRef);
+            const userDocRef = doc(db, "users", gUser.uid);
+            const userDoc = await getDoc(userDocRef);
 
-            if (!profileDoc.exists()) {
-                const newProfile: Profile = {
+            if (!userDoc.exists()) {
+                const newUser: User = {
                     id: gUser.uid,
                     fullName: gUser.displayName || 'Google User',
                     email: gUser.email || '',
-                    isSeller,
+                    role: isSeller ? 'freelancer' : 'client',
+                    avatarUrl: gUser.photoURL || undefined,
                     rating: 0,
                     reviewsCount: 0,
-                    avatarUrl: gUser.photoURL || undefined,
+                    walletBalance: 0,
+                    createdAt: serverTimestamp(),
+                    status: 'active',
                 };
-                await setDoc(profileDocRef, newProfile);
-                setProfile(newProfile);
+                await setDoc(userDocRef, newUser);
+                setProfile(newUser);
             }
             toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
 
@@ -183,7 +186,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const handleUpdateProfile = async (updates: Partial<Profile>, newAvatarFile?: File) => {
+    const handleUpdateProfile = async (updates: Partial<User>, newAvatarFile?: File) => {
         if (!user || !profile) {
             toast({ title: "Update Failed", description: "You must be logged in to update your profile.", variant: "destructive" });
             throw new Error("User not authenticated");
