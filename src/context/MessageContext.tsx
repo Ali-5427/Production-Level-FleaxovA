@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
 
 type Message = {
     from: 'me' | 'other';
@@ -55,39 +55,101 @@ const initialConversations: Conversation[] = [
     },
 ];
 
+// --- Robust Store Logic ---
+interface MessageState {
+    conversations: Conversation[];
+    selectedConversationId: string | null;
+}
+
+type Action = 
+    | { type: 'SELECT_CONVERSATION', payload: string | null };
+
+const reducer = (state: MessageState, action: Action): MessageState => {
+    switch (action.type) {
+        case 'SELECT_CONVERSATION': {
+            if (action.payload === state.selectedConversationId) {
+                return state;
+            }
+             // Mark as read when selecting
+            const newConversations = state.conversations.map(convo => 
+                convo.id === action.payload ? { ...convo, unread: 0 } : convo
+            );
+            return {
+                ...state,
+                selectedConversationId: action.payload,
+                conversations: newConversations,
+            };
+        }
+        default:
+            return state;
+    }
+}
+
+const listeners: Array<(state: MessageState) => void> = [];
+
+let memoryState: MessageState = {
+    conversations: initialConversations,
+    selectedConversationId: null,
+};
+
+// Set initial selection without triggering read logic
+if (memoryState.conversations.length > 0) {
+    memoryState.selectedConversationId = memoryState.conversations[0].id;
+}
+
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action);
+  listeners.forEach((listener) => {
+    listener(memoryState);
+  });
+}
+// --- End of Store Logic ---
 
 interface MessageContextType {
     conversations: Conversation[];
     selectedConversation: Conversation | null;
     selectConversation: (conversationId: string | null) => void;
-    markAsRead: (conversationId: string) => void;
 }
 
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
 
 export const MessageProvider = ({ children }: { children: ReactNode }) => {
-    const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
-    const [selectedConversationId, setSelectedConversationId] = useState<string | null>(conversations[0]?.id || null);
+    const [state, setState] = useState(memoryState);
+
+    useEffect(() => {
+        listeners.push(setState);
+        // Set initial state without marking as read
+        const initialState = {...memoryState};
+        if (initialState.conversations.length > 0 && !initialState.selectedConversationId) {
+            initialState.selectedConversationId = initialState.conversations[0].id;
+        }
+        setState(initialState);
+        
+        return () => {
+            const index = listeners.indexOf(setState);
+            if (index > -1) {
+                listeners.splice(index, 1);
+            }
+        };
+    }, []);
+
+    const selectedConversation = useMemo(() => 
+        state.conversations.find(c => c.id === state.selectedConversationId) || null
+    , [state.conversations, state.selectedConversationId]);
 
     const selectConversation = (conversationId: string | null) => {
-        setSelectedConversationId(conversationId);
-        if (conversationId) {
-            markAsRead(conversationId);
-        }
-    };
-    
-    const markAsRead = (conversationId: string) => {
-        setConversations(prev => 
-            prev.map(convo => 
-                convo.id === conversationId ? { ...convo, unread: 0 } : convo
-            )
-        );
+        dispatch({ type: 'SELECT_CONVERSATION', payload: conversationId });
     };
 
-    const selectedConversation = conversations.find(c => c.id === selectedConversationId) || null;
+    const value = {
+        conversations: state.conversations,
+        selectedConversation,
+        selectConversation,
+    };
 
     return (
-        <MessageContext.Provider value={{ conversations, selectedConversation, selectConversation, markAsRead }}>
+        <MessageContext.Provider value={value}>
             {children}
         </MessageContext.Provider>
     );
