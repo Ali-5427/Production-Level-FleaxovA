@@ -8,7 +8,9 @@ import {
   query,
   orderBy,
   doc,
-  getDoc
+  getDoc,
+  where,
+  deleteDoc,
 } from "firebase/firestore";
 import { app } from "./config";
 import type { Service, Job, Profile } from '../types';
@@ -21,9 +23,15 @@ const db = initializeFirestore(app, {
 // Services
 const servicesCollection = collection(db, 'services');
 
-export async function createService(serviceData: Omit<Service, 'id' | 'createdAt' | 'rating' | 'reviewsCount'>) {
+export async function createService(serviceData: Omit<Service, 'id' | 'createdAt' | 'rating' | 'reviewsCount' | 'freelancerName' | 'freelancerAvatarUrl'>) {
+    const sellerProfile = await getProfile(serviceData.freelancerId);
+    if (!sellerProfile) {
+        throw new Error("Could not find seller profile to create service.");
+    }
     return await addDoc(servicesCollection, {
         ...serviceData,
+        freelancerName: sellerProfile.fullName || "Unnamed Seller",
+        freelancerAvatarUrl: sellerProfile.avatarUrl || "",
         rating: 0,
         reviewsCount: 0,
         createdAt: serverTimestamp()
@@ -60,6 +68,25 @@ export async function getServiceById(id: string): Promise<Service | null> {
     }
 }
 
+export async function getServicesByFreelancer(freelancerId: string): Promise<Service[]> {
+    const q = query(servicesCollection, where('freelancerId', '==', freelancerId), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return { 
+        id: doc.id, 
+        ...data,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+      } as Service;
+    });
+}
+
+export async function deleteService(serviceId: string): Promise<void> {
+    const docRef = doc(db, 'services', serviceId);
+    await deleteDoc(docRef);
+}
+
+
 // Jobs
 const jobsCollection = collection(db, 'jobs');
 
@@ -90,7 +117,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     const profileDocRef = doc(db, 'profiles', userId);
     const docSnap = await getDoc(profileDocRef);
     if (docSnap.exists()) {
-        return docSnap.data() as Profile;
+        return { ...docSnap.data(), id: docSnap.id } as Profile;
     }
     return null;
 }

@@ -15,16 +15,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const serviceSchema = z.object({
     title: z.string().min(10, "Title must be at least 10 characters").max(100, "Title must be less than 100 characters"),
     description: z.string().min(30, "Description must be at least 30 characters"),
-    price: z.coerce.number().min(5, "Price must be at least $5"),
-    category: z.string().min(3, "Category is required"),
+    price: z.coerce.number().min(100, "Price must be at least ₹100"),
+    deliveryTime: z.coerce.number().min(1, "Delivery time must be at least 1 day"),
+    category: z.string().min(1, "Category is required"),
     tags: z.string().optional(),
 });
 
 type ServiceFormValues = z.infer<typeof serviceSchema>;
+
+const categories = [
+    "Graphic Design",
+    "Digital Marketing",
+    "Writing & Translation",
+    "Video & Animation",
+    "Music & Audio",
+    "Programming & Tech",
+    "Business",
+    "Lifestyle"
+];
 
 export default function CreateServicePage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -37,7 +50,8 @@ export default function CreateServicePage() {
         defaultValues: {
             title: '',
             description: '',
-            price: 5,
+            price: 100,
+            deliveryTime: 1,
             category: '',
             tags: ''
         }
@@ -54,7 +68,7 @@ export default function CreateServicePage() {
             await createService({
                 ...values,
                 tags: values.tags?.split(',').map(tag => tag.trim()).filter(Boolean) || [],
-                sellerId: user.uid,
+                freelancerId: user.uid,
             });
             toast({ title: "Service Created!", description: "Your service is now live on the marketplace." });
             router.push('/dashboard/services');
@@ -108,9 +122,9 @@ export default function CreateServicePage() {
                                     name="price"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Price ($)</FormLabel>
+                                            <FormLabel>Price (₹)</FormLabel>
                                             <FormControl>
-                                                <Input type="number" min="5" placeholder="e.g., 50" {...field} />
+                                                <Input type="number" min="100" placeholder="e.g., 5000" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -118,18 +132,38 @@ export default function CreateServicePage() {
                                 />
                                 <FormField
                                     control={form.control}
-                                    name="category"
+                                    name="deliveryTime"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Category</FormLabel>
+                                            <FormLabel>Delivery Time (in days)</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g., Graphic Design" {...field} />
+                                                <Input type="number" min="1" placeholder="e.g., 3" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                             </div>
+                            <FormField
+                                control={form.control}
+                                name="category"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Category</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a category" />
+                                        </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                        {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                              <FormField
                                 control={form.control}
                                 name="tags"
@@ -137,7 +171,7 @@ export default function CreateServicePage() {
                                     <FormItem>
                                         <FormLabel>Tags (comma-separated)</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="e.g., logo design, branding" {...field} />
+                                            <Input placeholder="e.g., logo design, branding, modern" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

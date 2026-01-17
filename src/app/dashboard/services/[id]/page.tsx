@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Star } from "lucide-react";
+import { Star, Clock } from "lucide-react";
 import Image from "next/image";
 import { getServiceById, getProfile } from "@/lib/firebase/firestore";
 import type { Service, Profile } from "@/lib/types";
@@ -25,7 +25,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
       const fetchedService = await getServiceById(id);
       setService(fetchedService);
       if (fetchedService) {
-        const fetchedSeller = await getProfile(fetchedService.sellerId);
+        const fetchedSeller = await getProfile(fetchedService.freelancerId);
         setSeller(fetchedSeller);
       }
       setLoading(false);
@@ -113,12 +113,16 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
             <CardHeader>
               <CardTitle className="flex justify-between items-baseline">
                 <span>Basic Package</span>
-                <span className="text-2xl font-bold">${service.price}</span>
+                <span className="text-2xl font-bold">₹{service.price}</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">A professional logo with 2 concepts and source files.</p>
-              <Button className="w-full" size="lg">Continue (${service.price})</Button>
+               <div className="flex items-center gap-2 text-muted-foreground mb-4">
+                  <Clock className="w-4 h-4" />
+                  <span>{service.deliveryTime} day delivery</span>
+              </div>
+              <Button className="w-full" size="lg">Continue (₹{service.price})</Button>
             </CardContent>
           </Card>
         </div>

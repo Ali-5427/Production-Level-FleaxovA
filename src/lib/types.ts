@@ -1,3 +1,4 @@
+
 // Base user from Firebase Authentication
 export interface AuthUser {
   uid: string;
@@ -20,6 +21,9 @@ export interface UserAccount {
 // Corresponds to the 'profiles' collection
 export interface Profile {
   id: string; // User UID
+  fullName: string;
+  email: string;
+  isSeller: boolean;
   title?: string;
   bio?: string;
   skills?: string[];
@@ -44,6 +48,8 @@ export interface Profile {
 export interface Service {
   id: string;
   freelancerId: string;
+  freelancerName: string;
+  freelancerAvatarUrl?: string;
   title: string;
   description: string;
   category: string;
