@@ -3,6 +3,7 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useMemo } from 'react';
 
+// Types remain the same
 type Message = {
     from: 'me' | 'other';
     text: string;
@@ -55,50 +56,81 @@ const initialConversations: Conversation[] = [
     },
 ];
 
-// --- Robust Store Logic ---
+
+// --- Global Store Implementation ---
+
 interface MessageState {
     conversations: Conversation[];
     selectedConversationId: string | null;
 }
 
 type Action = 
-    | { type: 'SELECT_CONVERSATION', payload: string | null };
+    | { type: 'SELECT_CONVERSATION', payload: { conversationId: string | null } };
 
-const reducer = (state: MessageState, action: Action): MessageState => {
+// The reducer function remains the same
+const messageReducer = (state: MessageState, action: Action): MessageState => {
     switch (action.type) {
         case 'SELECT_CONVERSATION': {
-            if (action.payload === state.selectedConversationId) {
-                return state;
+            const { conversationId } = action.payload;
+            if (conversationId === state.selectedConversationId) {
+              return state;
             }
-             // Mark as read when selecting
             const newConversations = state.conversations.map(convo => 
-                convo.id === action.payload ? { ...convo, unread: 0 } : convo
+                convo.id === conversationId ? { ...convo, unread: 0 } : convo
             );
             return {
                 ...state,
-                selectedConversationId: action.payload,
+                selectedConversationId: conversationId,
                 conversations: newConversations,
             };
         }
         default:
             return state;
     }
-}
-
-const listeners: Array<(state: MessageState) => void> = [];
-
-let memoryState: MessageState = {
-    conversations: initialConversations,
-    selectedConversationId: null,
 };
 
-function dispatch(action: Action) {
-  memoryState = reducer(memoryState, action);
-  listeners.forEach((listener) => {
-    listener(memoryState);
-  });
+// The actual store implementation that will be a singleton
+class MessageStore {
+    private state: MessageState;
+    private listeners: Set<(state: MessageState) => void> = new Set();
+
+    constructor() {
+        this.state = {
+            conversations: initialConversations,
+            // Select the first conversation by default
+            selectedConversationId: initialConversations.length > 0 ? initialConversations[0].id : null,
+        };
+    }
+
+    public subscribe = (listener: (state: MessageState) => void) => {
+        this.listeners.add(listener);
+        return () => {
+            this.listeners.delete(listener);
+        };
+    }
+
+    public dispatch = (action: Action) => {
+        this.state = messageReducer(this.state, action);
+        this.listeners.forEach(listener => listener(this.state));
+    }
+
+    public getState = () => {
+        return this.state;
+    }
 }
-// --- End of Store Logic ---
+
+// --- Singleton access ---
+// This ensures that even with hot-reloading in dev, we use the same store instance.
+const globalThisWithStore = globalThis as typeof globalThis & {
+  _messageStore?: MessageStore;
+};
+
+const messageStore = globalThisWithStore._messageStore ?? new MessageStore();
+if (process.env.NODE_ENV !== "production") {
+  globalThisWithStore._messageStore = messageStore;
+}
+
+// --- React Context & Provider ---
 
 interface MessageContextType {
     conversations: Conversation[];
@@ -109,31 +141,23 @@ interface MessageContextType {
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
 
 export const MessageProvider = ({ children }: { children: ReactNode }) => {
-    const [state, setState] = useState(memoryState);
+    const [state, setState] = useState(messageStore.getState());
 
     useEffect(() => {
-        listeners.push(setState);
-        // Set initial state without marking as read, but select the first conversation
-        if (memoryState.conversations.length > 0 && !memoryState.selectedConversationId) {
-            // This just sets the initial view, it doesn't run the 'read' logic
-            memoryState.selectedConversationId = memoryState.conversations[0].id;
-        }
-        setState({...memoryState}); // Ensure component has the initial state
-        
-        return () => {
-            const index = listeners.indexOf(setState);
-            if (index > -1) {
-                listeners.splice(index, 1);
-            }
-        };
+        // Subscribe to the store on mount
+        const unsubscribe = messageStore.subscribe(setState);
+        // When mounting, make sure we have the latest state
+        setState(messageStore.getState());
+        return unsubscribe;
     }, []);
 
     const selectedConversation = useMemo(() => 
-        state.conversations.find(c => c.id === state.selectedConversationId) || null
-    , [state.conversations, state.selectedConversationId]);
+        state.conversations.find(c => c.id === state.selectedConversationId) || null,
+        [state.conversations, state.selectedConversationId]
+    );
 
     const selectConversation = (conversationId: string | null) => {
-        dispatch({ type: 'SELECT_CONVERSATION', payload: conversationId });
+        messageStore.dispatch({ type: 'SELECT_CONVERSATION', payload: { conversationId } });
     };
 
     const value = {
