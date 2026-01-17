@@ -34,8 +34,8 @@ export default function Home() {
           </div>
           <div className="relative h-80 w-full md:h-96">
             <Image
-              src="https://storage.googleapis.com/aifirebase/scenarios/fleaxova/A_flat_lay_of_a_creative_professional%27s_desk._On_the_wooden_surface_is_a_silver_laptop_a_DSLR_camera_and_lens_several_guitar_effect_pedals_a_small_cactus_in_a_pot_and_a_notebook_with_a_pen._The_lighting_is_even_and_the_composition_is_balanced_conveying_a_sense_of_creativity_and_professionalism._.jpeg"
-              alt="A creative professional's desk with a laptop, camera, and audio equipment"
+              src="https://images.unsplash.com/photo-1558259299-5d46c4408730?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHx3b3Jrc3BhY2UlMjBjcmVhdGl2ZXxlbnwwfHx8fDE3Njg2NTg0ODJ8MA&ixlib=rb-4.1.0&q=80&w=1080"
+              alt="A designer's desk with a laptop and creative tools"
               fill
               className="rounded-lg object-cover"
               data-ai-hint="creative workspace"
