@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { categories } from '@/lib/categories';
 
 const serviceSchema = z.object({
     title: z.string().min(10, "Title must be at least 10 characters").max(100, "Title must be less than 100 characters"),
@@ -29,20 +30,8 @@ const serviceSchema = z.object({
 
 type ServiceFormValues = z.infer<typeof serviceSchema>;
 
-const categories = [
-    "Graphic Design",
-    "Digital Marketing",
-    "Writing & Translation",
-    "Video & Animation",
-    "Music & Audio",
-    "Programming & Tech",
-    "Business",
-    "Lifestyle"
-];
-
 export default function EditServicePage() {
     const [isLoading, setIsLoading] = useState(false);
-    const [service, setService] = useState<Service | null>(null);
     const [loadingService, setLoadingService] = useState(true);
 
     const router = useRouter();
@@ -72,7 +61,6 @@ export default function EditServicePage() {
                     router.push('/dashboard/services');
                     return;
                 }
-                setService(fetchedService);
                 form.reset({
                     ...fetchedService,
                     tags: fetchedService.tags?.join(', ') || ''

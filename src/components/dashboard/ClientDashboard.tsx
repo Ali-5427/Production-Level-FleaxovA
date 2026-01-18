@@ -94,9 +94,9 @@ export default function ClientDashboard() {
                         {stats.recentOrders.map(order => (
                             <TableRow key={order.id}>
                                 <TableCell>
-                                    <div className="font-medium">Service Title Placeholder</div>
+                                    <div className="font-medium">{order.title}</div>
                                     <div className="hidden text-sm text-muted-foreground md:inline">
-                                        Freelancer Name Placeholder
+                                        by {order.freelancerName}
                                     </div>
                                 </TableCell>
                                 <TableCell className="hidden sm:table-cell">

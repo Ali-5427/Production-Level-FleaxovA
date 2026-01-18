@@ -89,9 +89,10 @@ export interface Application {
 // Corresponds to the 'orders' collection
 export interface Order {
   id: string;
-  serviceId: string;
-  serviceTitle: string;
-  serviceImageUrl?: string;
+  title: string;
+  imageUrl?: string;
+  price: number;
+  status: 'pending_payment' | 'active' | 'completed' | 'cancelled' | 'disputed' | 'delivered';
   clientId: string;
   clientName: string;
   clientAvatarUrl?: string;
@@ -99,11 +100,12 @@ export interface Order {
   freelancerName: string;
   freelancerAvatarUrl?: string;
   participantIds: string[];
-  price: number;
   createdAt: any; // Firestore Timestamp
+  source: 'service' | 'job';
+  sourceId: string; // will be either serviceId or jobId
   paymentId?: string;
-  status: 'pending_payment' | 'active' | 'completed' | 'cancelled' | 'disputed' | 'delivered';
 }
+
 
 // Corresponds to the 'reviews' collection
 export interface Review {

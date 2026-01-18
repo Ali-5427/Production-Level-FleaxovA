@@ -247,33 +247,67 @@ export async function getApplicationsByFreelancer(freelancerId: string): Promise
     });
 }
 
-export async function acceptApplication(applicationId: string, jobId: string, freelancerId: string) {
-    const jobRef = doc(db, 'jobs', jobId);
-    const acceptedAppRef = doc(db, 'applications', applicationId);
-    
-    let jobData: Job;
+export async function acceptApplication(job: Job, application: Application) {
+    const jobRef = doc(db, 'jobs', job.id);
+    const acceptedAppRef = doc(db, 'applications', application.id);
+    const orderRef = doc(collection(db, 'orders'));
+
+    // Fetch client profile to get avatar for the order
+    const clientProfile = await getUser(job.clientId);
 
     await runTransaction(db, async (transaction) => {
         const jobDoc = await transaction.get(jobRef);
         if (!jobDoc.exists() || jobDoc.data().status !== 'open') {
             throw new Error("This job is no longer open for applications.");
         }
-        jobData = jobDoc.data() as Job;
-
-        transaction.update(jobRef, { status: 'assigned', assignedFreelancerId: freelancerId });
+        
+        // 1. Update Job
+        transaction.update(jobRef, { status: 'assigned', assignedFreelancerId: application.freelancerId });
+        
+        // 2. Update Application
         transaction.update(acceptedAppRef, { status: 'accepted' });
+
+        // 3. Create a new Order from the Job
+        const orderData: Omit<Order, 'id'> = {
+            title: job.title,
+            price: job.budget,
+            status: 'active',
+            clientId: job.clientId,
+            clientName: job.clientName,
+            clientAvatarUrl: clientProfile?.avatarUrl || '',
+            freelancerId: application.freelancerId,
+            freelancerName: application.freelancerName,
+            freelancerAvatarUrl: application.freelancerAvatarUrl || '',
+            participantIds: [job.clientId, application.freelancerId],
+            source: 'job',
+            sourceId: job.id,
+            createdAt: serverTimestamp()
+        };
+        transaction.set(orderRef, orderData);
     });
 
+    // --- Create Notifications ---
+
+    // For accepted freelancer
     await createNotification({
-        userId: freelancerId,
+        userId: application.freelancerId,
         type: 'application_accepted',
-        content: `Congratulations! You were hired for the job: "${jobData!.title}"`,
-        link: `/dashboard/my-applications`
+        content: `Congratulations! You were hired for the job: "${job.title}"`,
+        link: `/dashboard/my-orders`
     });
 
+    // For client (confirmation)
+     await createNotification({
+        userId: job.clientId,
+        type: 'application_accepted',
+        content: `You have hired ${application.freelancerName} for the job: "${job.title}"`,
+        link: `/dashboard/my-orders`
+    });
+
+    // For other rejected freelancers
     const otherAppsQuery = query(
         applicationsCollection,
-        where('jobId', '==', jobId),
+        where('jobId', '==', job.id),
         where('status', '==', 'pending')
     );
     
@@ -287,7 +321,7 @@ export async function acceptApplication(applicationId: string, jobId: string, fr
             notificationPromises.push(createNotification({
                 userId: doc.data().freelancerId,
                 type: 'application_rejected',
-                content: `Your application for "${jobData!.title}" was not selected.`,
+                content: `Your application for "${job.title}" was not selected.`,
                 link: `/dashboard/my-applications`
             }));
         });
@@ -323,9 +357,10 @@ export async function createOrder(service: Service, client: User) {
     }
 
     const orderData: Omit<Order, 'id' | 'createdAt'> = {
-        serviceId: service.id,
-        serviceTitle: service.title,
-        serviceImageUrl: service.imageUrl || '',
+        title: service.title,
+        imageUrl: service.imageUrl || '',
+        price: service.price,
+        status: 'active',
         clientId: client.id,
         clientName: client.fullName,
         clientAvatarUrl: client.avatarUrl || '',
@@ -333,8 +368,8 @@ export async function createOrder(service: Service, client: User) {
         freelancerName: seller.fullName,
         freelancerAvatarUrl: seller.avatarUrl || '',
         participantIds: [client.id, service.freelancerId],
-        price: service.price,
-        status: 'active', 
+        source: 'service',
+        sourceId: service.id,
     };
 
     const newOrderRef = await addDoc(collection(db, 'orders'), {
@@ -353,25 +388,22 @@ export async function createOrder(service: Service, client: User) {
 }
 
 export async function getOrdersForUser(userId: string): Promise<Order[]> {
-    const clientQuery = query(collection(db, 'orders'), where('clientId', '==', userId));
-    const freelancerQuery = query(collection(db, 'orders'), where('freelancerId', '==', userId));
-
-    const [clientSnapshot, freelancerSnapshot] = await Promise.all([
-        getDocs(clientQuery),
-        getDocs(freelancerQuery)
-    ]);
-
-    const orders = [
-        ...clientSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)),
-        ...freelancerSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)),
-    ];
+    const q = query(
+        ordersCollection, 
+        where('participantIds', 'array-contains', userId), 
+        orderBy('createdAt', 'desc')
+    );
     
-    orders.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    const snapshot = await getDocs(q);
 
-    return orders.map(order => ({
-        ...order,
-        createdAt: order.createdAt?.toDate ? order.createdAt.toDate() : new Date(),
-    }));
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            ...data,
+            id: doc.id,
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+        } as Order;
+    });
 }
 
 export async function updateOrderStatus(orderId: string, status: Order['status']) {
@@ -385,14 +417,15 @@ export async function updateOrderStatus(orderId: string, status: Order['status']
             await createNotification({
                 userId: order.clientId,
                 type: 'order_delivered',
-                content: `Your order "${order.serviceTitle}" has been delivered.`,
+                content: `Your order "${order.title}" has been delivered.`,
                 link: `/dashboard/my-orders`
             });
         } else if (status === 'completed') {
+            // TODO: In future, add logic here to transfer funds to seller's wallet
             await createNotification({
                 userId: order.freelancerId,
                 type: 'order_completed',
-                content: `Your order "${order.serviceTitle}" was marked as complete.`,
+                content: `Your order "${order.title}" was marked as complete.`,
                 link: `/dashboard/my-orders`
             });
         }
@@ -403,7 +436,8 @@ export async function hasCompletedOrder(userId: string, serviceId: string): Prom
     const q = query(
         collection(db, 'orders'),
         where('clientId', '==', userId),
-        where('serviceId', '==', serviceId),
+        where('sourceId', '==', serviceId),
+        where('source', '==', 'service'),
         where('status', '==', 'completed')
     );
     const snapshot = await getCountFromServer(q);

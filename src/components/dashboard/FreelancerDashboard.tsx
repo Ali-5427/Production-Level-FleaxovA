@@ -96,9 +96,9 @@ export default function FreelancerDashboard() {
                         {stats.recentOrders.map(order => (
                             <TableRow key={order.id}>
                                 <TableCell>
-                                    <div className="font-medium">Client Name Placeholder</div>
+                                    <div className="font-medium">{order.clientName}</div>
                                     <div className="hidden text-sm text-muted-foreground md:inline">
-                                        Service: Title Placeholder
+                                        {order.title}
                                     </div>
                                 </TableCell>
                                 <TableCell className="hidden sm:table-cell">

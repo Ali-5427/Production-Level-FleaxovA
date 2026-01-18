@@ -23,10 +23,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useRouter } from 'next/navigation';
 
 export default function JobApplicationsPage({ params }: { params: { id: string } }) {
     const { user } = useAuth();
     const { toast } = useToast();
+    const router = useRouter();
     const { id: jobId } = params;
 
     const [job, setJob] = useState<Job | null>(null);
@@ -63,12 +65,9 @@ export default function JobApplicationsPage({ params }: { params: { id: string }
     const handleAccept = async (application: Application) => {
         if (!job) return;
         try {
-            await acceptApplication(application.id, job.id, application.freelancerId);
-            setApplications(apps => apps.map(app => 
-                app.id === application.id ? { ...app, status: 'accepted' } : { ...app, status: 'rejected' }
-            ));
-            setJob(prevJob => prevJob ? { ...prevJob, status: 'assigned', assignedFreelancerId: application.freelancerId } : null);
-            toast({ title: "Applicant Hired!", description: `${application.freelancerName} has been awarded the job.` });
+            await acceptApplication(job, application);
+            toast({ title: "Applicant Hired!", description: `${application.freelancerName} has been awarded the job. An order has been created.` });
+            router.push('/dashboard/my-orders');
         } catch (error) {
             console.error("Failed to accept application:", error);
             toast({ title: "Error", description: "Could not process application acceptance.", variant: "destructive" });
@@ -104,7 +103,7 @@ export default function JobApplicationsPage({ params }: { params: { id: string }
                         <div>
                         <CardTitle className="text-blue-800">Job Assigned</CardTitle>
                         <CardDescription className="text-blue-700">
-                            This job has been assigned to a freelancer. No further actions can be taken.
+                            This job has been assigned to a freelancer. An order has been created to manage the project.
                         </CardDescription>
                         </div>
                     </CardHeader>
@@ -123,7 +122,7 @@ export default function JobApplicationsPage({ params }: { params: { id: string }
                                     </Avatar>
                                     <div>
                                         <p className="font-bold text-lg">{app.freelancerName}</p>
-                                        <p className="text-muted-foreground text-sm">Bid: <span className="font-semibold text-foreground">${app.bidAmount.toFixed(2)}</span></p>
+                                        <p className="text-muted-foreground text-sm">Bid: <span className="font-semibold text-foreground">₹{app.bidAmount.toFixed(2)}</span></p>
                                     </div>
                                 </div>
                                  <Badge variant={app.status === 'accepted' ? 'default' : app.status === 'rejected' ? 'destructive' : 'secondary'} className="capitalize">{app.status}</Badge>
@@ -143,7 +142,7 @@ export default function JobApplicationsPage({ params }: { params: { id: string }
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>Are you sure you want to hire {app.freelancerName}?</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                    This will award the job to this freelancer and automatically reject all other pending applications. This action cannot be undone.
+                                                    This will award the job to this freelancer, create an order, and automatically reject all other pending applications. This action cannot be undone.
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>

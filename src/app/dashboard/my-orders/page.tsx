@@ -40,7 +40,8 @@ export default function MyOrdersPage() {
         if (user) {
             fetchOrders();
         }
-    }, [user, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user]);
 
     const handleStatusUpdate = async (orderId: string, newStatus: Order['status']) => {
         try {
@@ -73,12 +74,12 @@ export default function MyOrdersPage() {
                     <Card key={order.id}>
                         <CardHeader className="flex flex-col md:flex-row items-start gap-4 space-y-0">
                             <Avatar className="w-24 h-24 md:w-16 md:h-16 rounded-md shrink-0">
-                                <AvatarImage src={order.serviceImageUrl} alt={order.serviceTitle} />
-                                <AvatarFallback>{order.serviceTitle.slice(0, 2)}</AvatarFallback>
+                                <AvatarImage src={order.imageUrl} alt={order.title} />
+                                <AvatarFallback>{order.title.slice(0, 2)}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1">
-                                <Link href={`/services/${order.serviceId}`} className="hover:underline">
-                                    <CardTitle className="text-lg leading-snug">{order.serviceTitle}</CardTitle>
+                                <Link href={order.source === 'service' ? `/services/${order.sourceId}` : `/jobs/${order.sourceId}`} className="hover:underline">
+                                    <CardTitle className="text-lg leading-snug">{order.title}</CardTitle>
                                 </Link>
                                 <CardDescription>
                                     {type === 'buying' ? `Sold by ${order.freelancerName}` : `Bought by ${order.clientName}`}
@@ -87,7 +88,7 @@ export default function MyOrdersPage() {
                             </div>
                             <div className="text-left md:text-right w-full md:w-auto mt-2 md:mt-0">
                                 <div className="font-bold text-lg">₹{order.price.toFixed(2)}</div>
-                                <Badge variant={order.status === 'completed' ? 'default' : 'secondary'} className="capitalize mt-1">{order.status}</Badge>
+                                <Badge variant={order.status === 'completed' ? 'default' : 'secondary'} className="capitalize mt-1">{order.status.replace('_', ' ')}</Badge>
                             </div>
                         </CardHeader>
                         <CardFooter className="flex justify-end gap-2">
