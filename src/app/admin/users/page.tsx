@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, ToggleLeft, ToggleRight } from "lucide-react";
+import { MoreHorizontal, ToggleLeft, ToggleRight, Star } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -34,17 +34,15 @@ export default function UserManagementPage() {
     }, []);
 
     useEffect(() => {
-        if (!searchTerm) {
-            setFilteredUsers(users);
-            return;
+        let results = users;
+        if (searchTerm) {
+            const lowerCaseSearchTerm = searchTerm.toLowerCase();
+            results = users.filter(user => {
+                const nameMatch = user.fullName ? user.fullName.toLowerCase().includes(lowerCaseSearchTerm) : false;
+                const emailMatch = user.email ? user.email.toLowerCase().includes(lowerCaseSearchTerm) : false;
+                return nameMatch || emailMatch;
+            });
         }
-
-        const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        const results = users.filter(user => {
-            const nameMatch = user.fullName ? user.fullName.toLowerCase().includes(lowerCaseSearchTerm) : false;
-            const emailMatch = user.email ? user.email.toLowerCase().includes(lowerCaseSearchTerm) : false;
-            return nameMatch || emailMatch;
-        });
         setFilteredUsers(results);
     }, [searchTerm, users]);
 
@@ -70,7 +68,7 @@ export default function UserManagementPage() {
             <h1 className="text-3xl font-bold">User Management</h1>
             <Card>
                 <CardHeader>
-                    <CardTitle>All Users</CardTitle>
+                    <CardTitle>All Users ({filteredUsers.length})</CardTitle>
                     <div className="pt-4">
                         <Input
                             placeholder="Search by name or email..."
@@ -88,6 +86,8 @@ export default function UserManagementPage() {
                                 <TableHead>Email</TableHead>
                                 <TableHead>Role</TableHead>
                                 <TableHead>Status</TableHead>
+                                <TableHead>Wallet</TableHead>
+                                <TableHead>Rating</TableHead>
                                 <TableHead>Joined</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -100,6 +100,8 @@ export default function UserManagementPage() {
                                         <TableCell><Skeleton className="h-4 w-48" /></TableCell>
                                         <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                                         <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                                         <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                                         <TableCell className="text-right"><Skeleton className="h-8 w-8" /></TableCell>
                                     </TableRow>
@@ -111,6 +113,14 @@ export default function UserManagementPage() {
                                         <TableCell>{user.email || 'N/A'}</TableCell>
                                         <TableCell><Badge variant="secondary" className="capitalize">{user.role}</Badge></TableCell>
                                         <TableCell><StatusBadge status={user.status} /></TableCell>
+                                        <TableCell>${(user.walletBalance ?? 0).toFixed(2)}</TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-1">
+                                                <Star className="w-4 h-4 text-yellow-400"/>
+                                                <span>{(user.rating ?? 0).toFixed(1)}</span>
+                                                <span className="text-muted-foreground">({user.reviewsCount ?? 0})</span>
+                                            </div>
+                                        </TableCell>
                                         <TableCell>{format(new Date(user.createdAt), 'PPP')}</TableCell>
                                         <TableCell className="text-right">
                                             <DropdownMenu>
@@ -133,7 +143,7 @@ export default function UserManagementPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">
+                                    <TableCell colSpan={8} className="h-24 text-center">
                                         No users found.
                                     </TableCell>
                                 </TableRow>
