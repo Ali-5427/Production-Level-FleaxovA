@@ -109,8 +109,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 return;
             }
 
-        } else if (user && !profile && !isAuthPage) {
+        } else if (user && !profile) {
             // LOGIC HOLE: User is authenticated but their profile data is missing.
+            // This is a critical error state. We log them out to be safe.
             (async () => {
                 await firebaseLogout();
                 toast({
