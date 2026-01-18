@@ -45,6 +45,14 @@ export async function createService(serviceData: Omit<Service, 'id' | 'createdAt
     });
 }
 
+export async function updateService(serviceId: string, serviceData: Partial<Omit<Service, 'id' | 'createdAt' | 'rating' | 'reviewsCount' | 'freelancerName' | 'freelancerAvatarUrl'>>) {
+    const serviceRef = doc(db, 'services', serviceId);
+    // Filter out undefined values to avoid overwriting fields
+    const dataToUpdate = Object.fromEntries(Object.entries(serviceData).filter(([_, v]) => v !== undefined));
+    return await updateDoc(serviceRef, dataToUpdate);
+}
+
+
 export async function getServices(): Promise<Service[]> {
     const q = query(servicesCollection, orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
@@ -196,27 +204,67 @@ export async function getApplicationsByFreelancer(freelancerId: string): Promise
 }
 
 export async function acceptApplication(applicationId: string, jobId: string, freelancerId: string) {
-    const batch = writeBatch(db);
-
-    // 1. Update the job
     const jobRef = doc(db, 'jobs', jobId);
-    batch.update(jobRef, { status: 'assigned', assignedFreelancerId: freelancerId });
-    
-    // 2. Accept the winning application
     const acceptedAppRef = doc(db, 'applications', applicationId);
-    batch.update(acceptedAppRef, { status: 'accepted' });
+    const orderRef = doc(collection(db, 'orders'));
 
-    // 3. Reject other pending applications for this job
-    const otherAppsQuery = query(applicationsCollection, where('jobId', '==', jobId), where('status', '==', 'pending'));
-    const otherAppsSnapshot = await getDocs(otherAppsQuery);
-    otherAppsSnapshot.forEach(doc => {
-        if (doc.id !== applicationId) {
-            batch.update(doc.ref, { status: 'rejected' });
+    // Use a transaction for the critical updates to ensure atomicity
+    await runTransaction(db, async (transaction) => {
+        const jobDoc = await transaction.get(jobRef);
+        const appDoc = await transaction.get(acceptedAppRef);
+
+        if (!jobDoc.exists() || !appDoc.exists()) {
+            throw new Error("Job or Application could not be found.");
         }
+        if (jobDoc.data().status !== 'open') {
+            throw new Error("This job is no longer open for applications.");
+        }
+
+        const jobData = jobDoc.data() as Job;
+        const appData = appDoc.data() as Application;
+        
+        const clientDoc = await transaction.get(doc(db, 'users', jobData.clientId));
+
+        // Create a new order based on the job and accepted application
+        const orderData: Omit<Order, 'id' | 'createdAt'> = {
+            serviceId: jobId, // Using jobId as the reference for job-based orders
+            serviceTitle: jobData.title,
+            serviceImageUrl: '', // No image for jobs
+            clientId: jobData.clientId,
+            clientName: jobData.clientName,
+            clientAvatarUrl: clientDoc.data()?.avatarUrl || '',
+            freelancerId: freelancerId,
+            freelancerName: appData.freelancerName,
+            freelancerAvatarUrl: appData.freelancerAvatarUrl || '',
+            participantIds: [jobData.clientId, freelancerId],
+            price: appData.bidAmount,
+            status: 'active', // Bypassing payment flow for now
+        };
+
+        // Perform writes within the transaction
+        transaction.set(orderRef, { ...orderData, createdAt: serverTimestamp() });
+        transaction.update(jobRef, { status: 'assigned', assignedFreelancerId: freelancerId });
+        transaction.update(acceptedAppRef, { status: 'accepted' });
     });
 
-    await batch.commit();
+    // After the transaction is successful, reject other applications.
+    // This runs as a separate batch write.
+    const otherAppsQuery = query(
+        applicationsCollection,
+        where('jobId', '==', jobId),
+        where('status', '==', 'pending')
+    );
+    
+    const otherAppsSnapshot = await getDocs(otherAppsQuery);
+    if (!otherAppsSnapshot.empty) {
+        const batch = writeBatch(db);
+        otherAppsSnapshot.forEach(doc => {
+            batch.update(doc.ref, { status: 'rejected' });
+        });
+        await batch.commit();
+    }
 }
+
 
 
 // Users

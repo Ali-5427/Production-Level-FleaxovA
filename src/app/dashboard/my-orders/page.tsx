@@ -40,7 +40,7 @@ export default function MyOrdersPage() {
         if (user) {
             fetchOrders();
         }
-    }, [user]);
+    }, [user, toast]);
 
     const handleStatusUpdate = async (orderId: string, newStatus: Order['status']) => {
         try {
