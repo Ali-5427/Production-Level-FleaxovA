@@ -22,7 +22,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const isDashboard = pathname.startsWith('/dashboard');
+  const isDashboardArea = pathname.startsWith('/dashboard');
+  const isAdminArea = pathname.startsWith('/admin');
+  const isAuthPage = pathname.startsWith('/signin') || pathname.startsWith('/register');
+
+  const showPublicHeader = !isDashboardArea && !isAdminArea && !isAuthPage;
 
   return (
     <html lang="en" className={inter.variable}>
@@ -30,7 +34,7 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <AuthProvider>
             <div className="flex min-h-screen flex-col">
-                {!isDashboard && <PublicHeader />}
+                {showPublicHeader && <PublicHeader />}
                 <main className="flex-grow">{children}</main>
             </div>
             <Toaster />
@@ -41,5 +45,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    
