@@ -42,6 +42,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
 import { MessageProvider } from '@/context/MessageContext';
 import { NotificationBell } from '@/components/layout/NotificationBell';
+import { MobileSidebarCloser } from '@/components/layout/MobileSidebarCloser';
 
 export default function DashboardLayout({
   children,
@@ -110,6 +111,7 @@ export default function DashboardLayout({
   return (
     <MessageProvider>
       <SidebarProvider>
+        <MobileSidebarCloser />
         <Sidebar>
           <SidebarHeader>
             <div className="flex items-center gap-2">
