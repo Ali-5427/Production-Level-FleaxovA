@@ -193,11 +193,13 @@ const Sidebar = React.forwardRef<
         </div>
       )
     }
-
-    if (isMobile === undefined) {
-      return null
-    }
-
+    
+    // On the server and initial client render, `isMobile` will be undefined.
+    // In this state, we don't render the mobile-specific Sheet component.
+    // Instead, we fall through to rendering the desktop version, which is
+    // hidden by default on small screens via CSS (`hidden md:block`).
+    // This ensures the server-rendered HTML matches the initial client render,
+    // preventing a hydration mismatch.
     if (isMobile) {
       return (
         <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
