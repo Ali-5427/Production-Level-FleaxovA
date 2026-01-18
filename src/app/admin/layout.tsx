@@ -2,19 +2,50 @@
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
-import { Loader2, LayoutGrid, Users, Briefcase, LogOut, Building } from 'lucide-react';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
+import {
+  Loader2,
+  LayoutGrid,
+  Users,
+  Briefcase,
+  LogOut,
+  Building,
+  Bell,
+  Search,
+} from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { usePathname } from 'next/navigation';
+import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { profile, loading, logout } = useAuth();
+  const { user, profile, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -35,45 +66,110 @@ export default function AdminLayout({
     );
   }
 
+  const getIsActive = (path: string) => {
+    if (path === '/admin') return pathname === path;
+    return pathname.startsWith(path);
+  };
+
   const navLinks = [
-      { href: "/admin", label: "Dashboard", icon: <LayoutGrid className="h-4 w-4"/> },
-      { href: "/admin/users", label: "User Management", icon: <Users className="h-4 w-4"/> },
-      { href: "/admin/services", label: "Service Moderation", icon: <Briefcase className="h-4 w-4"/> },
+    { href: "/admin", label: "Dashboard", icon: <LayoutGrid /> },
+    { href: "/admin/users", label: "User Management", icon: <Users /> },
+    { href: "/admin/services", label: "Service Moderation", icon: <Briefcase /> },
   ];
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
-        <aside className="w-64 flex-shrink-0 border-r bg-background hidden md:flex md:flex-col">
-            <div className="flex h-full flex-col">
-                <div className="p-4 border-b h-20 flex items-center">
-                    <h1 className="text-2xl font-bold text-primary flex items-center gap-2"><Building /> Admin</h1>
-                </div>
-                <nav className="flex-1 space-y-1 p-2">
-                    {navLinks.map(link => (
-                        <Link key={link.href} href={link.href} passHref>
-                            <Button variant={pathname === link.href ? "secondary" : "ghost"} className="w-full justify-start gap-3">
-                                {link.icon}
-                                {link.label}
-                            </Button>
-                        </Link>
-                    ))}
-                </nav>
-                <div className="mt-auto p-2 border-t">
-                    <Button variant="ghost" className="w-full justify-start gap-3" onClick={logout}>
-                        <LogOut className="h-4 w-4" />
-                        Logout
-                    </Button>
-                </div>
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader>
+          <div className="flex items-center gap-2">
+            <Building />
+            <Link href="/admin" className="text-xl font-bold text-primary">
+              Admin
+            </Link>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarMenu>
+            {navLinks.map((link) => (
+              <SidebarMenuItem key={link.href}>
+                <SidebarMenuButton
+                  asChild
+                  tooltip={link.label}
+                  isActive={getIsActive(link.href)}
+                >
+                  <Link href={link.href}>
+                    {link.icon}
+                    {link.label}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarContent>
+        <SidebarFooter>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton tooltip="Logout" onClick={logout}>
+                <LogOut />
+                Logout
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset>
+        <header className="flex h-16 items-center justify-between border-b bg-background px-4">
+          <div className="flex items-center gap-4">
+            <SidebarTrigger />
+            <div className="relative hidden md:block">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search..." className="pl-8" />
             </div>
-        </aside>
-        <div className="flex-1 flex flex-col">
-          <header className="h-20 border-b bg-background flex items-center px-6 md:hidden">
-              <h1 className="text-2xl font-bold text-primary flex items-center gap-2"><Building /> Admin</h1>
-          </header>
-          <main className="flex-1 overflow-y-auto p-4 md:p-8">
-              {children}
-          </main>
-        </div>
-    </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon">
+              <Bell className="h-5 w-5" />
+              <span className="sr-only">Notifications</span>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="relative h-8 w-8 rounded-full"
+                >
+                  <Avatar>
+                    <AvatarImage
+                      src={
+                        profile?.avatarUrl ||
+                        user?.photoURL ||
+                        'https://picsum.photos/seed/user-avatar/100/100'
+                      }
+                      alt="Admin Avatar"
+                    />
+                    <AvatarFallback>
+                      {profile?.fullName?.charAt(0) || 'A'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>
+                  {profile?.fullName || 'Admin Account'}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/admin">Dashboard</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          {children}
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
