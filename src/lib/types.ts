@@ -153,7 +153,7 @@ export interface Notification {
   type: string;
   content: string;
   isRead: boolean;
-  createdAt: Date;
+  createdAt: any; // Can be Date or Firestore Timestamp
   link?: string;
 }
 

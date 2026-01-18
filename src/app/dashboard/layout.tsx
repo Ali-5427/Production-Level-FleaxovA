@@ -15,7 +15,6 @@ import {
   SidebarMenuSkeleton,
 } from '@/components/ui/sidebar';
 import {
-  Bell,
   Briefcase,
   FileText,
   LayoutGrid,
@@ -42,6 +41,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
 import { MessageProvider } from '@/context/MessageContext';
+import { NotificationBell } from '@/components/layout/NotificationBell';
 
 export default function DashboardLayout({
   children,
@@ -185,10 +185,7 @@ export default function DashboardLayout({
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon">
-                <Bell className="h-5 w-5" />
-                <span className="sr-only">Notifications</span>
-              </Button>
+              <NotificationBell />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button

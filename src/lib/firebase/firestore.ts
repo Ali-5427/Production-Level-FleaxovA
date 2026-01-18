@@ -19,12 +19,49 @@ import {
   limit,
 } from "firebase/firestore";
 import { app } from "./config";
-import type { Service, Job, User, Application, Review, Conversation, Message, Order } from '../types';
+import type { Service, Job, User, Application, Review, Conversation, Message, Order, Notification } from '../types';
 
 // Initialize Firestore with long-polling enabled to prevent connection issues in some environments
 const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
 });
+
+// --- NOTIFICATIONS ---
+export async function createNotification(notificationData: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) {
+    return await addDoc(collection(db, 'notifications'), {
+        ...notificationData,
+        isRead: false,
+        createdAt: serverTimestamp()
+    });
+}
+
+export function getNotificationsListener(
+  userId: string, 
+  callback: (notifications: Notification[]) => void
+) {
+  const q = query(
+    collection(db, 'notifications'), 
+    where('userId', '==', userId),
+    orderBy('createdAt', 'desc'),
+    limit(20)
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const notifications = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate(),
+    } as Notification));
+    callback(notifications);
+  }, (error) => {
+      console.error("Notifications listener error: ", error);
+  });
+}
+
+export async function markNotificationAsRead(notificationId: string) {
+    const notifRef = doc(db, 'notifications', notificationId);
+    return updateDoc(notifRef, { isRead: true });
+}
 
 // Services
 const servicesCollection = collection(db, 'services');
@@ -166,7 +203,7 @@ export async function applyToJob(appData: Omit<Application, 'id' | 'createdAt' |
     const jobRef = doc(db, 'jobs', appData.jobId);
     const appRef = doc(collection(db, 'applications'));
 
-    return runTransaction(db, async (transaction) => {
+    await runTransaction(db, async (transaction) => {
         const jobDoc = await transaction.get(jobRef);
         if (!jobDoc.exists()) {
             throw "Job does not exist!";
@@ -181,6 +218,13 @@ export async function applyToJob(appData: Omit<Application, 'id' | 'createdAt' |
             status: 'pending',
             createdAt: serverTimestamp()
         });
+    });
+
+    await createNotification({
+        userId: appData.clientId,
+        type: 'new_application',
+        content: `${appData.freelancerName} applied to your job: "${appData.jobTitle}"`,
+        link: `/dashboard/my-jobs/${appData.jobId}/applications`
     });
 }
 
@@ -206,49 +250,27 @@ export async function getApplicationsByFreelancer(freelancerId: string): Promise
 export async function acceptApplication(applicationId: string, jobId: string, freelancerId: string) {
     const jobRef = doc(db, 'jobs', jobId);
     const acceptedAppRef = doc(db, 'applications', applicationId);
-    const orderRef = doc(collection(db, 'orders'));
+    
+    let jobData: Job;
 
-    // Use a transaction for the critical updates to ensure atomicity
     await runTransaction(db, async (transaction) => {
         const jobDoc = await transaction.get(jobRef);
-        const appDoc = await transaction.get(acceptedAppRef);
-
-        if (!jobDoc.exists() || !appDoc.exists()) {
-            throw new Error("Job or Application could not be found.");
-        }
-        if (jobDoc.data().status !== 'open') {
+        if (!jobDoc.exists() || jobDoc.data().status !== 'open') {
             throw new Error("This job is no longer open for applications.");
         }
+        jobData = jobDoc.data() as Job;
 
-        const jobData = jobDoc.data() as Job;
-        const appData = appDoc.data() as Application;
-        
-        const clientDoc = await transaction.get(doc(db, 'users', jobData.clientId));
-
-        // Create a new order based on the job and accepted application
-        const orderData: Omit<Order, 'id' | 'createdAt'> = {
-            serviceId: jobId, // Using jobId as the reference for job-based orders
-            serviceTitle: jobData.title,
-            serviceImageUrl: '', // No image for jobs
-            clientId: jobData.clientId,
-            clientName: jobData.clientName,
-            clientAvatarUrl: clientDoc.data()?.avatarUrl || '',
-            freelancerId: freelancerId,
-            freelancerName: appData.freelancerName,
-            freelancerAvatarUrl: appData.freelancerAvatarUrl || '',
-            participantIds: [jobData.clientId, freelancerId],
-            price: appData.bidAmount,
-            status: 'active', // Bypassing payment flow for now
-        };
-
-        // Perform writes within the transaction
-        transaction.set(orderRef, { ...orderData, createdAt: serverTimestamp() });
         transaction.update(jobRef, { status: 'assigned', assignedFreelancerId: freelancerId });
         transaction.update(acceptedAppRef, { status: 'accepted' });
     });
 
-    // After the transaction is successful, reject other applications.
-    // This runs as a separate batch write.
+    await createNotification({
+        userId: freelancerId,
+        type: 'application_accepted',
+        content: `Congratulations! You were hired for the job: "${jobData!.title}"`,
+        link: `/dashboard/my-applications`
+    });
+
     const otherAppsQuery = query(
         applicationsCollection,
         where('jobId', '==', jobId),
@@ -258,13 +280,20 @@ export async function acceptApplication(applicationId: string, jobId: string, fr
     const otherAppsSnapshot = await getDocs(otherAppsQuery);
     if (!otherAppsSnapshot.empty) {
         const batch = writeBatch(db);
+        const notificationPromises: Promise<any>[] = [];
+
         otherAppsSnapshot.forEach(doc => {
             batch.update(doc.ref, { status: 'rejected' });
+            notificationPromises.push(createNotification({
+                userId: doc.data().freelancerId,
+                type: 'application_rejected',
+                content: `Your application for "${jobData!.title}" was not selected.`,
+                link: `/dashboard/my-applications`
+            }));
         });
-        await batch.commit();
+        await Promise.all([batch.commit(), ...notificationPromises]);
     }
 }
-
 
 
 // Users
@@ -305,15 +334,22 @@ export async function createOrder(service: Service, client: User) {
         freelancerAvatarUrl: seller.avatarUrl || '',
         participantIds: [client.id, service.freelancerId],
         price: service.price,
-        // For this non-payment flow, we'll mark it as 'active' immediately.
-        // In a real scenario, this would be 'pending_payment'.
         status: 'active', 
     };
 
-    return await addDoc(collection(db, 'orders'), {
+    const newOrderRef = await addDoc(collection(db, 'orders'), {
         ...orderData,
         createdAt: serverTimestamp()
     });
+
+    await createNotification({
+        userId: service.freelancerId,
+        type: 'new_order',
+        content: `${client.fullName} ordered your service: "${service.title}"`,
+        link: `/dashboard/my-orders`
+    });
+
+    return newOrderRef;
 }
 
 export async function getOrdersForUser(userId: string): Promise<Order[]> {
@@ -330,10 +366,8 @@ export async function getOrdersForUser(userId: string): Promise<Order[]> {
         ...freelancerSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)),
     ];
     
-    // Sort by creation date
     orders.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
-    // Convert timestamps
     return orders.map(order => ({
         ...order,
         createdAt: order.createdAt?.toDate ? order.createdAt.toDate() : new Date(),
@@ -342,7 +376,27 @@ export async function getOrdersForUser(userId: string): Promise<Order[]> {
 
 export async function updateOrderStatus(orderId: string, status: Order['status']) {
     const orderRef = doc(db, 'orders', orderId);
-    return await updateDoc(orderRef, { status });
+    await updateDoc(orderRef, { status });
+
+    const orderDoc = await getDoc(orderRef);
+    if (orderDoc.exists()) {
+        const order = orderDoc.data() as Order;
+        if (status === 'delivered') {
+            await createNotification({
+                userId: order.clientId,
+                type: 'order_delivered',
+                content: `Your order "${order.serviceTitle}" has been delivered.`,
+                link: `/dashboard/my-orders`
+            });
+        } else if (status === 'completed') {
+            await createNotification({
+                userId: order.freelancerId,
+                type: 'order_completed',
+                content: `Your order "${order.serviceTitle}" was marked as complete.`,
+                link: `/dashboard/my-orders`
+            });
+        }
+    }
 }
 
 export async function hasCompletedOrder(userId: string, serviceId: string): Promise<boolean> {
@@ -390,37 +444,30 @@ export async function addReviewAndRecalculateRating(reviewData: Omit<Review, 'id
             const serviceData = serviceDoc.data() as Service;
             const freelancerData = freelancerDoc.data() as User;
             
-            // Recalculate service rating
             const serviceOldRating = serviceData.rating || 0;
             const serviceOldCount = serviceData.reviewsCount || 0;
             const serviceNewCount = serviceOldCount + 1;
             const serviceNewRating = ((serviceOldRating * serviceOldCount) + reviewData.rating) / serviceNewCount;
 
-            // Recalculate freelancer's overall rating
             const freelancerOldRating = freelancerData.rating || 0;
             const freelancerOldCount = freelancerData.reviewsCount || 0;
             const freelancerNewCount = freelancerOldCount + 1;
             const freelancerNewRating = ((freelancerOldRating * freelancerOldCount) + reviewData.rating) / freelancerNewCount;
             
-            // 1. Create the new review
             transaction.set(reviewRef, { ...reviewData, createdAt: serverTimestamp() });
             
-            // 2. Update the service
             transaction.update(serviceRef, { rating: serviceNewRating, reviewsCount: serviceNewCount });
 
-            // 3. Update the freelancer's profile
             transaction.update(freelancerRef, { rating: freelancerNewRating, reviewsCount: freelancerNewCount });
         });
     } catch (e) {
         console.error("Review transaction failed: ", e);
-        throw e; // Re-throw the error to be caught by the calling component
+        throw e;
     }
 }
 
 
 // --- MESSAGING ---
-
-// Contact-prevention regex
 const CONTACT_INFO_REGEX = {
     email: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i,
     phone: /(?:\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/,
@@ -491,7 +538,7 @@ export async function sendMessage({
     
     const conversationRef = doc(db, 'conversations', conversationId);
     const messagesRef = collection(conversationRef, 'messages');
-    const newMessageRef = doc(messagesRef); // Create a ref for the new message
+    const newMessageRef = doc(messagesRef);
 
     const conversationSnap = await getDoc(conversationRef);
     if (!conversationSnap.exists()) {
@@ -500,7 +547,6 @@ export async function sendMessage({
     const conversationData = conversationSnap.data() as Conversation;
     const unreadCounts = conversationData.unreadCounts || {};
 
-    // Increment unread count for all other participants
     conversationData.participants.forEach(participantId => {
         if (participantId !== senderId) {
             unreadCounts[participantId] = (unreadCounts[participantId] || 0) + 1;
@@ -509,14 +555,12 @@ export async function sendMessage({
 
     const batch = writeBatch(db);
 
-    // 1. Set the new message
     batch.set(newMessageRef, {
         senderId,
         content,
         createdAt: serverTimestamp(),
     });
 
-    // 2. Update the parent conversation
     batch.update(conversationRef, {
         lastMessageContent: content,
         lastMessageSenderId: senderId,
@@ -525,6 +569,20 @@ export async function sendMessage({
     });
     
     await batch.commit();
+
+    const senderProfile = await getUser(senderId);
+    const senderName = senderProfile?.fullName || 'A user';
+
+    const notificationPromises = conversationData.participants
+        .filter(pid => pid !== senderId)
+        .map(participantId => createNotification({
+            userId: participantId,
+            type: 'new_message',
+            content: `You have a new message from ${senderName}.`,
+            link: '/dashboard/messages'
+        }));
+    
+    await Promise.all(notificationPromises);
 }
 
 export async function markConversationAsRead(conversationId: string, userId: string) {
@@ -599,7 +657,6 @@ export async function getAdminDashboardStats() {
         totalUsers: usersSnapshot.data().count,
         totalServices: servicesSnapshot.data().count,
         totalJobs: jobsSnapshot.data().count,
-        // Placeholders, as per plan
         totalRevenue: 12350, 
         pendingWithdrawals: 0,
     };
