@@ -42,7 +42,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
 import { MessageProvider } from '@/context/MessageContext';
 import { NotificationBell } from '@/components/layout/NotificationBell';
-import { MobileSidebarCloser } from '@/components/layout/MobileSidebarCloser';
+import { SheetClose } from '@/components/ui/sheet';
 
 export default function DashboardLayout({
   children,
@@ -111,16 +111,17 @@ export default function DashboardLayout({
   return (
     <MessageProvider>
       <SidebarProvider>
-        <MobileSidebarCloser />
         <Sidebar>
           <SidebarHeader>
             <div className="flex items-center gap-2">
-              <Link
-                href="/dashboard"
-                className="text-xl font-bold text-primary"
-              >
-                Fleaxova
-              </Link>
+              <SheetClose asChild>
+                <Link
+                  href="/dashboard"
+                  className="text-xl font-bold text-primary"
+                >
+                  Fleaxova
+                </Link>
+              </SheetClose>
             </div>
           </SidebarHeader>
           <SidebarContent>
@@ -138,16 +139,18 @@ export default function DashboardLayout({
                     return null;
                   return (
                     <SidebarMenuItem key={link.href}>
-                      <SidebarMenuButton
-                        asChild
-                        tooltip={link.label}
-                        isActive={getIsActive(link.href)}
-                      >
-                        <Link href={link.href}>
-                          {link.icon}
-                          {link.label}
-                        </Link>
-                      </SidebarMenuButton>
+                      <SheetClose asChild>
+                        <SidebarMenuButton
+                          asChild
+                          tooltip={link.label}
+                          isActive={getIsActive(link.href)}
+                        >
+                          <Link href={link.href}>
+                            {link.icon}
+                            {link.label}
+                          </Link>
+                        </SidebarMenuButton>
+                      </SheetClose>
                     </SidebarMenuItem>
                   );
                 })
@@ -157,16 +160,18 @@ export default function DashboardLayout({
           <SidebarFooter>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  tooltip="Edit Profile"
-                  isActive={getIsActive('/dashboard/profile')}
-                >
-                  <Link href="/dashboard/profile">
-                    <User />
-                    Edit Profile
-                  </Link>
-                </SidebarMenuButton>
+                <SheetClose asChild>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip="Edit Profile"
+                    isActive={getIsActive('/dashboard/profile')}
+                  >
+                    <Link href="/dashboard/profile">
+                      <User />
+                      Edit Profile
+                    </Link>
+                  </SidebarMenuButton>
+                </SheetClose>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton tooltip="Logout" onClick={logout}>
