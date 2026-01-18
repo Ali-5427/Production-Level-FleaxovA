@@ -178,6 +178,11 @@ const Sidebar = React.forwardRef<
     ref
   ) => {
     const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+    const [isMounted, setIsMounted] = React.useState(false)
+
+    React.useEffect(() => {
+      setIsMounted(true)
+    }, [])
 
     if (collapsible === "none") {
       return (
@@ -193,13 +198,11 @@ const Sidebar = React.forwardRef<
         </div>
       )
     }
+
+    if (!isMounted) {
+      return null
+    }
     
-    // On the server and initial client render, `isMobile` will be undefined.
-    // In this state, we don't render the mobile-specific Sheet component.
-    // Instead, we fall through to rendering the desktop version, which is
-    // hidden by default on small screens via CSS (`hidden md:block`).
-    // This ensures the server-rendered HTML matches the initial client render,
-    // preventing a hydration mismatch.
     if (isMobile) {
       return (
         <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
@@ -659,10 +662,12 @@ const SidebarMenuSkeleton = React.forwardRef<
     showIcon?: boolean
   }
 >(({ className, showIcon = false, ...props }, ref) => {
-  // Random width between 50 to 90%.
-  const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`
-  }, [])
+  const [width, setWidth] = React.useState("75%") // Default width
+
+  React.useEffect(() => {
+    // Generate a random width on the client side after hydration
+    setWidth(`${Math.floor(Math.random() * 40) + 50}%`)
+  }, []) // Empty dependency array ensures this runs only once on the client
 
   return (
     <div
