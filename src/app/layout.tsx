@@ -24,9 +24,8 @@ export default function RootLayout({
   const pathname = usePathname();
   const isDashboardArea = pathname.startsWith('/dashboard');
   const isAdminArea = pathname.startsWith('/admin');
-  const isAuthPage = pathname.startsWith('/signin') || pathname.startsWith('/register');
 
-  const showPublicHeader = !isDashboardArea && !isAdminArea && !isAuthPage;
+  const showPublicHeader = !isDashboardArea && !isAdminArea;
 
   return (
     <html lang="en" className={inter.variable}>
