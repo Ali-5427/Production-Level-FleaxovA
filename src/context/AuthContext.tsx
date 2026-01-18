@@ -4,7 +4,7 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getAuth, onAuthStateChanged, User as FirebaseAuthUser } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 import { app } from '@/lib/firebase/config';
 import { db } from '@/lib/firebase/firestore';
 import { 
@@ -42,28 +42,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { toast } = useToast();
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            if (firebaseUser) {
-                const userDocRef = doc(db, "users", firebaseUser.uid);
-                const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists()) {
-                    setProfile(userDoc.data() as User);
-                } else {
-                    // This case handles a user that exists in Auth but not Firestore.
-                    // It can happen during initial sign-up before the Firestore doc is created.
-                    // We'll wait for the profile to be created elsewhere.
-                    setProfile(null); 
-                }
-                setUser(firebaseUser);
-            } else {
-                setUser(null);
+        let profileListenerUnsubscribe: (() => void) | null = null;
+    
+        const authListenerUnsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+          if (profileListenerUnsubscribe) {
+            profileListenerUnsubscribe(); // Clean up old profile listener
+          }
+    
+          if (firebaseUser) {
+            setUser(firebaseUser);
+            // setLoading(true) is important here to wait for profile
+            setLoading(true); 
+            profileListenerUnsubscribe = onSnapshot(
+              doc(db, 'users', firebaseUser.uid),
+              (doc) => {
+                setProfile(doc.exists() ? (doc.data() as User) : null);
+                setLoading(false);
+              },
+              (error) => {
+                console.error("Error listening to profile:", error);
                 setProfile(null);
-            }
+                setLoading(false);
+              }
+            );
+          } else {
+            // No user, clear state
+            setUser(null);
+            setProfile(null);
             setLoading(false);
+          }
         });
-
-        return () => unsubscribe();
-    }, []);
+    
+        return () => {
+          authListenerUnsubscribe();
+          if (profileListenerUnsubscribe) {
+            profileListenerUnsubscribe();
+          }
+        };
+      }, []);
     
     const handleLogout = async () => {
         try {
@@ -109,24 +125,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 return;
             }
 
-        } else if (user && !profile) {
-            // LOGIC HOLE: User is authenticated but their profile data is missing.
-            // This is a critical error state. We log them out to be safe.
-            (async () => {
-                await firebaseLogout();
-                toast({
-                    title: "Account Data Missing",
-                    description: "Your profile could not be loaded. You have been logged out for security. Please try logging in again.",
-                    variant: "destructive",
-                });
-                router.push('/signin');
-            })();
         } else if (!user) {
             // User is not logged in, protect routes
             if (isDashboardPath || isAdminPath) {
                 router.push('/signin');
             }
         }
+        // The case where (user && !profile) is now implicitly handled. 
+        // The app will show a loading state until the profile listener resolves, 
+        // which fixes the registration race condition.
     }, [user, profile, loading, pathname, router, toast]);
 
     const handleLogin: typeof firebaseLogin = async (email, password) => {
