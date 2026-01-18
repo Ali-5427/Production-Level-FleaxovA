@@ -18,48 +18,53 @@ service cloud.firestore {
     }
 
     function isFreelancer(userId) {
-      return getUserData(userId).role == 'freelancer';
+      // Use exists() to prevent errors on non-existent users during signup etc.
+      return exists(/databases/$(database)/documents/users/$(userId)) && getUserData(userId).role == 'freelancer';
     }
     
     function isClient(userId) {
-      return getUserData(userId).role == 'client';
+       return exists(/databases/$(database)/documents/users/$(userId)) && getUserData(userId).role == 'client';
     }
     
     function isAdmin(userId) {
-      return getUserData(userId).role == 'admin';
+       return exists(/databases/$(database)/documents/users/$(userId)) && getUserData(userId).role == 'admin';
     }
 
     // USERS: Consolidated user data collection.
     match /users/{userId} {
+      // Any signed in user can read any profile (needed for service/job pages)
       allow read: if isSignedIn();
       allow create: if isOwner(userId);
-      // Owner can update their own profile, but not their role, balance, or status.
-      // Admin can update anything.
+      // Owner can update their own profile fields. Admin can update anything.
       allow update: if (isOwner(userId) && 
+                      // Prevent users from changing their own role, balance, or status
                       !('role' in request.resource.data && request.resource.data.role != resource.data.role) &&
                       !('walletBalance' in request.resource.data && request.resource.data.walletBalance != resource.data.walletBalance) &&
                       !('status' in request.resource.data && request.resource.data.status != resource.data.status)
                     ) || isAdmin(request.auth.uid);
+      // Only admin can delete users
+      allow delete: if isAdmin(request.auth.uid);
     }
     
-    // SERVICES: Can be read by any signed-in user. Only 'freelancers' can CUD their own services.
+    // SERVICES: Can be read by any signed-in user. Only 'freelancers' can CUD their own services. Admin can moderate.
     match /services/{serviceId} {
       allow read: if isSignedIn();
       allow create: if isFreelancer(request.auth.uid) && request.resource.data.freelancerId == request.auth.uid;
-      allow update, delete: if isFreelancer(request.auth.uid) && get(path).data.freelancerId == request.auth.uid;
+      allow update: if isFreelancer(request.auth.uid) && resource.data.freelancerId == request.auth.uid;
+      allow delete: if (isFreelancer(request.auth.uid) && resource.data.freelancerId == request.auth.uid) || isAdmin(request.auth.uid);
     }
     
-    // JOBS: Can be read by any signed-in user. Only 'clients' can CUD their own jobs.
+    // JOBS: Can be read by any signed-in user. Only 'clients' can CUD their own jobs. Admin can moderate.
     match /jobs/{jobId} {
       allow read: if isSignedIn();
       allow create: if isClient(request.auth.uid) && request.resource.data.clientId == request.auth.uid;
-      allow update, delete: if (isClient(request.auth.uid) && get(path).data.clientId == request.auth.uid) || isAdmin(request.auth.uid);
+      allow update, delete: if (isClient(request.auth.uid) && resource.data.clientId == request.auth.uid) || isAdmin(request.auth.uid);
     }
     
-    // APPLICATIONS: Freelancers can create. Client of the job and applicant can read. Client can update status.
+    // APPLICATIONS: Freelancers can create. Client of the job and applicant can read. Client can update status. Admin can read.
     match /applications/{applicationId} {
       allow read: if isSignedIn() && 
-                    (isOwner(resource.data.freelancerId) || isOwner(get(/databases/$(database)/documents/jobs/$(resource.data.jobId)).data.clientId));
+                    (isOwner(resource.data.freelancerId) || isOwner(get(/databases/$(database)/documents/jobs/$(resource.data.jobId)).data.clientId) || isAdmin(request.auth.uid));
       allow create: if isFreelancer(request.auth.uid) && request.resource.data.freelancerId == request.auth.uid;
       allow update: if isClient(request.auth.uid) && isOwner(get(/databases/$(database)/documents/jobs/$(resource.data.jobId)).data.clientId);
     }
@@ -71,21 +76,23 @@ service cloud.firestore {
       allow update: if isSignedIn() && (isOwner(resource.data.clientId) || isOwner(resource.data.freelancerId));
     }
     
-    // REVIEWS: Anyone can read. Only a signed-in user can create a review for themselves.
+    // REVIEWS: Anyone can read. Only a signed-in user can create a review. Admin can delete.
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if isSignedIn() && isOwner(request.resource.data.reviewerId);
+      allow delete: if isAdmin(request.auth.uid);
     }
 
-    // CONVERSATIONS: Only participants can read/write.
+    // CONVERSATIONS: Only participants can read/write. Admin can read for moderation.
     match /conversations/{conversationId} {
-      allow read, update: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow read, update: if isSignedIn() && (request.auth.uid in resource.data.participants || isAdmin(request.auth.uid));
       allow create: if isSignedIn() && request.auth.uid in request.resource.data.participants;
       
-      // MESSAGES: Subcollection. Only participants can read/create. No editing/deleting.
+      // MESSAGES: Subcollection. Only participants can read/create. No editing/deleting. Admin can read.
       match /messages/{messageId} {
-        allow read, create: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
-        allow update, delete: if false;
+        allow read: if isSignedIn() && (request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants || isAdmin(request.auth.uid));
+        allow create: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow update, delete: if false; // Messages are immutable
       }
     }
     

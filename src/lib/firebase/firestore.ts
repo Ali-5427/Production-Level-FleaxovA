@@ -15,6 +15,7 @@ import {
   writeBatch,
   onSnapshot,
   updateDoc,
+  getCountFromServer,
 } from "firebase/firestore";
 import { app } from "./config";
 import type { Service, Job, User, Application, Review, Conversation, Message } from '../types';
@@ -408,6 +409,47 @@ export async function markConversationAsRead(conversationId: string, userId: str
     } catch (error) {
         console.error("Failed to mark conversation as read:", error);
     }
+}
+
+// --- ADMIN FUNCTIONS ---
+
+export async function getAdminDashboardStats() {
+    const usersCol = collection(db, 'users');
+    const servicesCol = collection(db, 'services');
+    const jobsCol = collection(db, 'jobs');
+
+    const [usersSnapshot, servicesSnapshot, jobsSnapshot] = await Promise.all([
+        getCountFromServer(usersCol),
+        getCountFromServer(servicesCol),
+        getCountFromServer(jobsCol),
+    ]);
+
+    return {
+        totalUsers: usersSnapshot.data().count,
+        totalServices: servicesSnapshot.data().count,
+        totalJobs: jobsSnapshot.data().count,
+        // Placeholders, as per plan
+        totalRevenue: 12350, 
+        pendingWithdrawals: 0,
+    };
+}
+
+export async function getAllUsers(): Promise<User[]> {
+    const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+        } as User;
+    });
+}
+
+export async function updateUserStatus(userId: string, status: 'active' | 'suspended') {
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, { status });
 }
 
 

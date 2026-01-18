@@ -1,49 +1,58 @@
 "use client"
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Briefcase, FileText, BarChart } from "lucide-react";
+import { Users, Briefcase, FileText, BarChart, DollarSign } from "lucide-react";
+import { getAdminDashboardStats } from "@/lib/firebase/firestore";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface AdminStats {
+  totalUsers: number;
+  totalServices: number;
+  totalJobs: number;
+  totalRevenue: number;
+  pendingWithdrawals: number;
+}
 
 export default function AdminDashboard() {
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoading(true);
+      try {
+        const fetchedStats = await getAdminDashboardStats();
+        setStats(fetchedStats);
+      } catch (error) {
+        console.error("Failed to fetch admin stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const StatCard = ({ title, value, icon, loading }: { title: string, value: string | number, icon: React.ReactNode, loading: boolean }) => (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent>
+        {loading ? <Skeleton className="h-8 w-20" /> : <div className="text-2xl font-bold">{value}</div>}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">1,254</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Services</CardTitle>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">532</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Open Jobs</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">88</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Platform Revenue</CardTitle>
-            <BarChart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">$12,350</div>
-          </CardContent>
-        </Card>
+        <StatCard title="Total Users" value={stats?.totalUsers ?? 0} icon={<Users className="h-4 w-4 text-muted-foreground" />} loading={loading} />
+        <StatCard title="Active Services" value={stats?.totalServices ?? 0} icon={<Briefcase className="h-4 w-4 text-muted-foreground" />} loading={loading} />
+        <StatCard title="Open Jobs" value={stats?.totalJobs ?? 0} icon={<FileText className="h-4 w-4 text-muted-foreground" />} loading={loading} />
+        <StatCard title="Platform Revenue" value={`$${stats?.totalRevenue.toLocaleString() ?? '0'}`} icon={<DollarSign className="h-4 w-4 text-muted-foreground" />} loading={loading} />
       </div>
 
       <Card>
@@ -51,30 +60,7 @@ export default function AdminDashboard() {
           <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>User</TableHead>
-                        <TableHead>Action</TableHead>
-                        <TableHead>Details</TableHead>
-                        <TableHead>Date</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    <TableRow>
-                        <TableCell>Olivia Smith</TableCell>
-                        <TableCell>Created Service</TableCell>
-                        <TableCell>I will create a stunning video animation</TableCell>
-                        <TableCell>2023-10-27</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>John Doe</TableCell>
-                        <TableCell>Posted Job</TableCell>
-                        <TableCell>Looking for a Python developer</TableCell>
-                        <TableCell>2023-10-26</TableCell>
-                    </TableRow>
-                </TableBody>
-            </Table>
+            <p className="text-muted-foreground text-center">Recent activity feed coming soon.</p>
         </CardContent>
       </Card>
     </div>
