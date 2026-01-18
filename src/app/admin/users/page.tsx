@@ -34,10 +34,17 @@ export default function UserManagementPage() {
     }, []);
 
     useEffect(() => {
-        const results = users.filter(user =>
-            user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        if (!searchTerm) {
+            setFilteredUsers(users);
+            return;
+        }
+
+        const lowerCaseSearchTerm = searchTerm.toLowerCase();
+        const results = users.filter(user => {
+            const nameMatch = user.fullName ? user.fullName.toLowerCase().includes(lowerCaseSearchTerm) : false;
+            const emailMatch = user.email ? user.email.toLowerCase().includes(lowerCaseSearchTerm) : false;
+            return nameMatch || emailMatch;
+        });
         setFilteredUsers(results);
     }, [searchTerm, users]);
 
@@ -100,8 +107,8 @@ export default function UserManagementPage() {
                             ) : filteredUsers.length > 0 ? (
                                 filteredUsers.map(user => (
                                     <TableRow key={user.id}>
-                                        <TableCell className="font-medium">{user.fullName}</TableCell>
-                                        <TableCell>{user.email}</TableCell>
+                                        <TableCell className="font-medium">{user.fullName || 'N/A'}</TableCell>
+                                        <TableCell>{user.email || 'N/A'}</TableCell>
                                         <TableCell><Badge variant="secondary" className="capitalize">{user.role}</Badge></TableCell>
                                         <TableCell><StatusBadge status={user.status} /></TableCell>
                                         <TableCell>{format(new Date(user.createdAt), 'PPP')}</TableCell>
