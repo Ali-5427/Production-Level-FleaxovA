@@ -1,5 +1,5 @@
 
-"use client";
+'use client';
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -69,20 +69,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (loading) return;
 
         const publicOnlyPaths = ['/signin', '/register'];
-        const isProtectedPath = pathname.startsWith('/dashboard') || pathname.startsWith('/admin');
+        const isAuthPage = publicOnlyPaths.includes(pathname);
+        const isAdminPath = pathname.startsWith('/admin');
+        const isUserDashboard = pathname === '/dashboard';
+        const isDashboardPath = pathname.startsWith('/dashboard');
 
-        if (user) {
-            // If user is logged in, and tries to access a public-only page, redirect to dashboard.
-             if (publicOnlyPaths.includes(pathname)) {
-                 router.push('/dashboard');
+        if (user && profile) {
+            // User is logged in with a profile
+            const targetDashboard = profile.role === 'admin' ? '/admin' : '/dashboard';
+
+            // 1. If user is on a login/register page, redirect them to their correct dashboard
+            if (isAuthPage) {
+                router.push(targetDashboard);
+                return;
             }
-        } else {
-            // If user is not logged in and tries to access a protected path, redirect to signin.
-            if (isProtectedPath) {
+
+            // 2. If an admin lands on the regular user dashboard, redirect to the admin dashboard
+            if (profile.role === 'admin' && isUserDashboard) {
+                router.push('/admin');
+                return;
+            }
+            
+            // 3. If a regular user lands on any admin page, redirect them to the regular dashboard
+            if (profile.role !== 'admin' && isAdminPath) {
+                router.push('/dashboard');
+                return;
+            }
+
+        } else if (!user) {
+            // User is not logged in, protect routes
+            if (isDashboardPath || isAdminPath) {
                 router.push('/signin');
             }
         }
-    }, [user, loading, pathname, router]);
+    }, [user, profile, loading, pathname, router]);
 
     const handleLogout = async () => {
         try {
@@ -102,7 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             const userCredential = await firebaseLogin(email, password);
             toast({ title: "Login Successful", description: "Welcome back!" });
-            router.push('/dashboard'); // Manually redirect on successful login
+            // Redirection is now handled by the useEffect hook
             return userCredential;
         } catch (error: any) {
             let description = "An unexpected error occurred.";
@@ -123,7 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             const userCredential = await firebaseRegister(email, password, fullName, isSeller);
             toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
-            router.push('/dashboard'); // Manually redirect on successful registration
+             // Redirection is now handled by the useEffect hook
             return userCredential;
         } catch (error: any) {
              let description = "An unexpected error occurred.";
@@ -165,7 +185,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setProfile(newUser);
             }
             toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
-            router.push('/dashboard'); // Manually redirect
+            // Redirection is now handled by the useEffect hook
 
         } catch (error: any) {
              toast({
@@ -180,7 +200,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             await signInWithGoogle();
             toast({ title: "Login Successful", description: "Welcome back!" });
-            router.push('/dashboard'); // Manually redirect
+            // Redirection is now handled by the useEffect hook
         } catch (error: any) {
             toast({
                 title: "Login Failed",
