@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAllUsers, updateUserStatus } from "@/lib/firebase/firestore";
+import { getUsersListener, updateUserStatus } from "@/lib/firebase/firestore";
 import type { User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -21,22 +22,15 @@ export default function UserManagementPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const { toast } = useToast();
 
-    const fetchUsers = async () => {
-        setLoading(true);
-        try {
-            const allUsers = await getAllUsers();
-            setUsers(allUsers);
-            setFilteredUsers(allUsers);
-        } catch (error) {
-            console.error("Failed to fetch users:", error);
-            toast({ title: "Error", description: "Could not fetch users.", variant: "destructive" });
-        } finally {
-            setLoading(false);
-        }
-    };
-    
     useEffect(() => {
-        fetchUsers();
+        setLoading(true);
+        const unsubscribe = getUsersListener((allUsers) => {
+            setUsers(allUsers);
+            setLoading(false);
+        });
+
+        // Cleanup listener on component unmount
+        return () => unsubscribe();
     }, []);
 
     useEffect(() => {
@@ -51,9 +45,6 @@ export default function UserManagementPage() {
         const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
         try {
             await updateUserStatus(userId, newStatus);
-            setUsers(prevUsers => prevUsers.map(user =>
-                user.id === userId ? { ...user, status: newStatus } : user
-            ));
             toast({ title: "Success", description: `User status updated to ${newStatus}.` });
         } catch (error) {
             console.error("Failed to update user status:", error);

@@ -447,6 +447,26 @@ export async function getAllUsers(): Promise<User[]> {
     });
 }
 
+export function getUsersListener(callback: (users: User[]) => void) {
+    const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const users = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+            } as User;
+        });
+        callback(users);
+    }, (error) => {
+        console.error("Failed to listen for user updates:", error);
+    });
+
+    return unsubscribe;
+}
+
 export async function updateUserStatus(userId: string, status: 'active' | 'suspended') {
     const userRef = doc(db, 'users', userId);
     await updateDoc(userRef, { status });
