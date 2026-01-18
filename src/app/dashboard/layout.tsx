@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -12,6 +11,7 @@ import {
   SidebarMenuButton,
   SidebarProvider,
   SidebarTrigger,
+  SidebarMenuSkeleton,
 } from '@/components/ui/sidebar';
 import {
   Bell,
@@ -20,11 +20,10 @@ import {
   LayoutGrid,
   LogOut,
   Mail,
-  Settings,
   User,
   Wallet,
   Search,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -53,16 +52,51 @@ export default function DashboardLayout({
   const getIsActive = (path: string) => {
     if (path === '/dashboard') return pathname === path;
     return pathname.startsWith(path);
-  }
+  };
 
   const navLinks = [
-    { href: "/dashboard", label: "Dashboard", icon: <LayoutGrid />, roles: ["client", "freelancer", "admin"] },
-    { href: "/dashboard/services", label: "My Services", icon: <Briefcase />, roles: ["freelancer"] },
-    { href: "/dashboard/my-applications", label: "My Applications", icon: <FileText />, roles: ["freelancer"] },
-    { href: "/dashboard/my-jobs", label: "My Jobs", icon: <Briefcase />, roles: ["client"] },
-    { href: "/dashboard/jobs", label: "Find Jobs", icon: <Search />, roles: ["client", "freelancer"] },
-    { href: "/dashboard/messages", label: "Messages", icon: <Mail />, roles: ["client", "freelancer"] },
-    { href: "/dashboard/wallet", label: "Wallet", icon: <Wallet />, roles: ["client", "freelancer"] },
+    {
+      href: '/dashboard',
+      label: 'Dashboard',
+      icon: <LayoutGrid />,
+      roles: ['client', 'freelancer', 'admin'],
+    },
+    {
+      href: '/dashboard/services',
+      label: 'My Services',
+      icon: <Briefcase />,
+      roles: ['freelancer'],
+    },
+    {
+      href: '/dashboard/my-applications',
+      label: 'My Applications',
+      icon: <FileText />,
+      roles: ['freelancer'],
+    },
+    {
+      href: '/dashboard/my-jobs',
+      label: 'My Jobs',
+      icon: <Briefcase />,
+      roles: ['client'],
+    },
+    {
+      href: '/dashboard/jobs',
+      label: 'Find Jobs',
+      icon: <Search />,
+      roles: ['client', 'freelancer'],
+    },
+    {
+      href: '/dashboard/messages',
+      label: 'Messages',
+      icon: <Mail />,
+      roles: ['client', 'freelancer'],
+    },
+    {
+      href: '/dashboard/wallet',
+      label: 'Wallet',
+      icon: <Wallet />,
+      roles: ['client', 'freelancer'],
+    },
   ];
 
   return (
@@ -71,35 +105,58 @@ export default function DashboardLayout({
         <Sidebar>
           <SidebarHeader>
             <div className="flex items-center gap-2">
-              <Link href="/dashboard" className="text-xl font-bold text-primary">Fleaxova</Link>
+              <Link
+                href="/dashboard"
+                className="text-xl font-bold text-primary"
+              >
+                Fleaxova
+              </Link>
             </div>
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
-              {navLinks.map((link) => {
-                if (!profile || !link.roles.includes(profile.role)) return null;
-                return (
-                  <SidebarMenuItem key={link.href}>
-                    <SidebarMenuButton asChild tooltip={link.label} isActive={getIsActive(link.href)}>
-                      <Link href={link.href}>
-                        {link.icon}
-                        {link.label}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {loading ? (
+                <>
+                  <SidebarMenuSkeleton showIcon />
+                  <SidebarMenuSkeleton showIcon />
+                  <SidebarMenuSkeleton showIcon />
+                  <SidebarMenuSkeleton showIcon />
+                </>
+              ) : (
+                navLinks.map((link) => {
+                  if (!profile || !link.roles.includes(profile.role))
+                    return null;
+                  return (
+                    <SidebarMenuItem key={link.href}>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={link.label}
+                        isActive={getIsActive(link.href)}
+                      >
+                        <Link href={link.href}>
+                          {link.icon}
+                          {link.label}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })
+              )}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
             <SidebarMenu>
               <SidebarMenuItem>
-                 <SidebarMenuButton asChild tooltip="Edit Profile" isActive={getIsActive('/dashboard/profile')}>
-                    <Link href="/dashboard/profile">
-                      <User />
-                      Edit Profile
-                    </Link>
-                  </SidebarMenuButton>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Edit Profile"
+                  isActive={getIsActive('/dashboard/profile')}
+                >
+                  <Link href="/dashboard/profile">
+                    <User />
+                    Edit Profile
+                  </Link>
+                </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton tooltip="Logout" onClick={logout}>
@@ -116,10 +173,7 @@ export default function DashboardLayout({
               <SidebarTrigger />
               <div className="relative hidden md:block">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search..."
-                  className="pl-8"
-                />
+                <Input placeholder="Search..." className="pl-8" />
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -129,18 +183,29 @@ export default function DashboardLayout({
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Button
+                    variant="ghost"
+                    className="relative h-8 w-8 rounded-full"
+                  >
                     <Avatar>
                       <AvatarImage
-                        src={profile?.avatarUrl || user?.photoURL || "https://picsum.photos/seed/user-avatar/100/100"}
+                        src={
+                          profile?.avatarUrl ||
+                          user?.photoURL ||
+                          'https://picsum.photos/seed/user-avatar/100/100'
+                        }
                         alt="User Avatar"
                       />
-                      <AvatarFallback>{profile?.fullName?.charAt(0) || 'U'}</AvatarFallback>
+                      <AvatarFallback>
+                        {profile?.fullName?.charAt(0) || 'U'}
+                      </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>{profile?.fullName || 'My Account'}</DropdownMenuLabel>
+                  <DropdownMenuLabel>
+                    {profile?.fullName || 'My Account'}
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard">Dashboard</Link>
@@ -155,8 +220,8 @@ export default function DashboardLayout({
             </div>
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6">
-            {loading ? (
-              <div className="flex items-center justify-center h-full">
+            {loading && !profile ? (
+              <div className="flex h-full items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : (
