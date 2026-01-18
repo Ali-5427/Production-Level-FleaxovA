@@ -1,16 +1,13 @@
-
 import { initializeApp, getApp, getApps } from "firebase/app";
 
 // Your web app's Firebase configuration
-// IMPORTANT: Replace the placeholder values below with your actual Firebase project credentials.
-// You can find these in your Firebase project settings.
 const firebaseConfig = {
-  apiKey: "PASTE_YOUR_API_KEY_HERE",
-  authDomain: "PASTE_YOUR_AUTH_DOMAIN_HERE",
-  projectId: "PASTE_YOUR_PROJECT_ID_HERE",
-  storageBucket: "PASTE_YOUR_STORAGE_BUCKET_HERE",
-  messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID_HERE",
-  appId: "PASTE_YOUR_APP_ID_HERE"
+  apiKey: "AIzaSyBTdO_dHKgUGiMU9nUfGdiZLanW6FQYEio",
+  authDomain: "studio-1916341789-a2802.firebaseapp.com",
+  projectId: "studio-1916341789-a2802",
+  storageBucket: "studio-1916341789-a2802.appspot.com",
+  messagingSenderId: "426805525072",
+  appId: "1:426805525072:web:e19c644612722681a76f55"
 };
 
 // Initialize Firebase
