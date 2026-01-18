@@ -13,9 +13,11 @@ import {
   deleteDoc,
   runTransaction,
   writeBatch,
+  onSnapshot,
+  updateDoc,
 } from "firebase/firestore";
 import { app } from "./config";
-import type { Service, Job, User, Application, Review } from '../types';
+import type { Service, Job, User, Application, Review, Conversation, Message } from '../types';
 
 // Initialize Firestore with long-polling enabled to prevent connection issues in some environments
 const db = initializeFirestore(app, {
@@ -282,6 +284,129 @@ export async function addReviewAndRecalculateRating(reviewData: Omit<Review, 'id
     } catch (e) {
         console.error("Review transaction failed: ", e);
         throw e; // Re-throw the error to be caught by the calling component
+    }
+}
+
+
+// --- MESSAGING ---
+
+// Contact-prevention regex
+const CONTACT_INFO_REGEX = {
+    email: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i,
+    phone: /(?:\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/,
+    social: /(^|[^@\w])@(\w{1,15})\b/,
+};
+
+function containsContactInfo(text: string): boolean {
+    return CONTACT_INFO_REGEX.email.test(text) || 
+           CONTACT_INFO_REGEX.phone.test(text) ||
+           CONTACT_INFO_REGEX.social.test(text);
+}
+
+
+export function getConversationsListener(
+  userId: string, 
+  callback: (conversations: Conversation[]) => void
+) {
+  const q = query(
+    collection(db, 'conversations'), 
+    where('participants', 'array-contains', userId),
+    orderBy('lastUpdatedAt', 'desc')
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const conversations = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      lastUpdatedAt: doc.data().lastUpdatedAt?.toDate(),
+    } as Conversation));
+    callback(conversations);
+  }, (error) => {
+      console.error("Conversation listener error: ", error);
+  });
+}
+
+export function getMessagesListener(
+  conversationId: string, 
+  callback: (messages: Message[]) => void
+) {
+  const messagesRef = collection(db, 'conversations', conversationId, 'messages');
+  const q = query(messagesRef, orderBy('createdAt', 'asc'));
+
+  return onSnapshot(q, (snapshot) => {
+    const messages = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate(),
+    } as Message));
+    callback(messages);
+  }, (error) => {
+      console.error("Message listener error: ", error);
+  });
+}
+
+
+export async function sendMessage({
+    conversationId,
+    senderId,
+    content,
+}: {
+    conversationId: string;
+    senderId: string;
+    content: string;
+}) {
+    if (containsContactInfo(content)) {
+        throw new Error("Message blocked: Please do not share contact information.");
+    }
+    
+    const conversationRef = doc(db, 'conversations', conversationId);
+    const messagesRef = collection(conversationRef, 'messages');
+    const newMessageRef = doc(messagesRef); // Create a ref for the new message
+
+    const conversationSnap = await getDoc(conversationRef);
+    if (!conversationSnap.exists()) {
+        throw new Error("Conversation not found.");
+    }
+    const conversationData = conversationSnap.data() as Conversation;
+    const unreadCounts = conversationData.unreadCounts || {};
+
+    // Increment unread count for all other participants
+    conversationData.participants.forEach(participantId => {
+        if (participantId !== senderId) {
+            unreadCounts[participantId] = (unreadCounts[participantId] || 0) + 1;
+        }
+    });
+
+    const batch = writeBatch(db);
+
+    // 1. Set the new message
+    batch.set(newMessageRef, {
+        senderId,
+        content,
+        createdAt: serverTimestamp(),
+    });
+
+    // 2. Update the parent conversation
+    batch.update(conversationRef, {
+        lastMessageContent: content,
+        lastMessageSenderId: senderId,
+        lastUpdatedAt: serverTimestamp(),
+        unreadCounts: unreadCounts,
+    });
+    
+    await batch.commit();
+}
+
+export async function markConversationAsRead(conversationId: string, userId: string) {
+    const conversationRef = doc(db, 'conversations', conversationId);
+    const fieldToUpdate = `unreadCounts.${userId}`;
+    
+    try {
+        await updateDoc(conversationRef, {
+            [fieldToUpdate]: 0
+        });
+    } catch (error) {
+        console.error("Failed to mark conversation as read:", error);
     }
 }
 

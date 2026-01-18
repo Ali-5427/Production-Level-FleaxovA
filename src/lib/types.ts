@@ -112,15 +112,31 @@ export interface Review {
 }
 
 
-// Corresponds to the 'messages' collection
+// Corresponds to the 'conversations' collection
+export interface Conversation {
+  id: string;
+  participants: string[]; // array of user UIDs
+  participantDetails: {
+    [uid: string]: {
+      fullName: string;
+      avatarUrl?: string;
+    }
+  };
+  lastMessageContent: string;
+  lastMessageSenderId: string;
+  lastUpdatedAt: any; // Firestore Timestamp
+  // unread count for each participant, keyed by UID
+  unreadCounts: {
+    [uid: string]: number;
+  };
+}
+
+// Corresponds to the 'messages' sub-collection
 export interface Message {
   id: string;
-  conversationId: string;
   senderId: string;
-  receiverId: string;
   content: string;
-  createdAt: Date;
-  isRead: boolean;
+  createdAt: any; // Firestore Timestamp
 }
 
 // Corresponds to the 'notifications' collection
