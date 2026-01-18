@@ -16,9 +16,10 @@ import {
   onSnapshot,
   updateDoc,
   getCountFromServer,
+  limit,
 } from "firebase/firestore";
 import { app } from "./config";
-import type { Service, Job, User, Application, Review, Conversation, Message } from '../types';
+import type { Service, Job, User, Application, Review, Conversation, Message, Order } from '../types';
 
 // Initialize Firestore with long-polling enabled to prevent connection issues in some environments
 const db = initializeFirestore(app, {
@@ -27,6 +28,7 @@ const db = initializeFirestore(app, {
 
 // Services
 const servicesCollection = collection(db, 'services');
+const ordersCollection = collection(db, 'orders');
 
 export async function createService(serviceData: Omit<Service, 'id' | 'createdAt' | 'rating' | 'reviewsCount' | 'freelancerName' | 'freelancerAvatarUrl'>) {
     const sellerProfile = await getUser(serviceData.freelancerId);
@@ -410,6 +412,48 @@ export async function markConversationAsRead(conversationId: string, userId: str
         console.error("Failed to mark conversation as read:", error);
     }
 }
+
+
+// --- DASHBOARD FUNCTIONS ---
+export async function getFreelancerDashboardData(userId: string) {
+    const servicesQuery = query(servicesCollection, where('freelancerId', '==', userId));
+    const ordersQuery = query(ordersCollection, where('freelancerId', '==', userId));
+    const recentOrdersQuery = query(ordersCollection, where('freelancerId', '==', userId), orderBy('createdAt', 'desc'), limit(5));
+
+    const [servicesSnapshot, ordersSnapshot, recentOrdersSnapshot] = await Promise.all([
+        getCountFromServer(servicesQuery),
+        getDocs(ordersQuery),
+        getDocs(recentOrdersQuery)
+    ]);
+
+    const totalServices = servicesSnapshot.data().count;
+    const activeOrders = ordersSnapshot.docs.filter(doc => doc.data().status === 'active').length;
+    const totalEarnings = ordersSnapshot.docs.reduce((sum, doc) => sum + doc.data().price, 0);
+
+    const recentOrders = recentOrdersSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Order));
+
+    return { totalServices, activeOrders, totalEarnings, recentOrders };
+}
+
+export async function getClientDashboardData(userId: string) {
+    const jobsQuery = query(jobsCollection, where('clientId', '==', userId));
+    const ordersQuery = query(ordersCollection, where('clientId', '==', userId));
+    const recentOrdersQuery = query(ordersCollection, where('clientId', '==', userId), orderBy('createdAt', 'desc'), limit(5));
+
+    const [jobsSnapshot, ordersSnapshot, recentOrdersSnapshot] = await Promise.all([
+        getCountFromServer(jobsQuery),
+        getDocs(ordersQuery),
+        getDocs(recentOrdersQuery)
+    ]);
+
+    const totalJobs = jobsSnapshot.data().count;
+    const activeOrders = ordersSnapshot.docs.filter(doc => doc.data().status === 'active').length;
+
+    const recentOrders = recentOrdersSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Order));
+
+    return { totalJobs, activeOrders, recentOrders };
+}
+
 
 // --- ADMIN FUNCTIONS ---
 

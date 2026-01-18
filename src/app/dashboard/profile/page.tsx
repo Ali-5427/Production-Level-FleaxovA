@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Star } from "lucide-react";
+import { Github, Linkedin, Star, Twitter } from "lucide-react";
 
 export default function ProfilePage() {
     const { user, profile, updateProfile } = useAuth();
@@ -17,8 +17,12 @@ export default function ProfilePage() {
 
     // Form state
     const [fullName, setFullName] = useState('');
+    const [title, setTitle] = useState('');
     const [bio, setBio] = useState('');
     const [skills, setSkills] = useState('');
+    const [github, setGithub] = useState('');
+    const [linkedin, setLinkedin] = useState('');
+    const [twitter, setTwitter] = useState('');
     
     // Avatar state
     const [avatarFile, setAvatarFile] = useState<File | undefined>(undefined);
@@ -28,8 +32,12 @@ export default function ProfilePage() {
     useEffect(() => {
         if (profile) {
             setFullName(profile.fullName || '');
+            setTitle(profile.title || '');
             setBio(profile.bio || '');
             setSkills(profile.skills?.join(', ') || '');
+            setGithub(profile.socialLinks?.github || '');
+            setLinkedin(profile.socialLinks?.linkedin || '');
+            setTwitter(profile.socialLinks?.twitter || '');
         }
 
         // Determine avatar URL, prioritizing Firestore profile, then auth, then fallback.
@@ -52,8 +60,14 @@ export default function ProfilePage() {
         try {
             const profileUpdates = {
                 fullName,
+                title,
                 bio,
                 skills: skills.split(',').map(s => s.trim()).filter(Boolean),
+                socialLinks: {
+                    github,
+                    linkedin,
+                    twitter
+                }
             };
             await updateProfile(profileUpdates, avatarFile);
         } catch (error) {
@@ -93,22 +107,28 @@ export default function ProfilePage() {
                                 <Label htmlFor="name">Full Name</Label>
                                 <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} disabled={isLoading} />
                             </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="title">Professional Title</Label>
+                                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Senior Web Developer" disabled={isLoading} />
+                            </div>
+                        </div>
+
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email</Label>
                                 <Input id="email" type="email" value={user?.email || ''} disabled />
                             </div>
-                        </div>
-                        
-                        {profile?.role === 'freelancer' && (
-                             <div className="space-y-2">
-                                <Label>Overall Rating</Label>
-                                <div className="flex items-center gap-2">
-                                    <Star className="w-5 h-5 text-yellow-500" />
-                                    <span className="font-bold">{profile.rating.toFixed(1)}</span>
-                                    <span className="text-muted-foreground">({profile.reviewsCount} reviews)</span>
+                            {profile?.role === 'freelancer' && (
+                                <div className="space-y-2">
+                                    <Label>Overall Rating</Label>
+                                    <div className="flex items-center gap-2 h-10">
+                                        <Star className="w-5 h-5 text-yellow-500" />
+                                        <span className="font-bold">{(profile.rating || 0).toFixed(1)}</span>
+                                        <span className="text-muted-foreground">({profile.reviewsCount || 0} reviews)</span>
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
 
                         <div className="space-y-2">
                             <Label htmlFor="bio">Bio</Label>
@@ -122,6 +142,22 @@ export default function ProfilePage() {
                                 <p className="text-sm text-muted-foreground">Comma-separated list of your top skills.</p>
                             </div>
                         )}
+
+                        <div className="space-y-4">
+                            <Label>Social Links</Label>
+                            <div className="relative">
+                                <Github className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input value={github} onChange={e => setGithub(e.target.value)} className="pl-10" placeholder="github.com/username" disabled={isLoading} />
+                            </div>
+                            <div className="relative">
+                                <Linkedin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input value={linkedin} onChange={e => setLinkedin(e.target.value)} className="pl-10" placeholder="linkedin.com/in/username" disabled={isLoading} />
+                            </div>
+                            <div className="relative">
+                                <Twitter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input value={twitter} onChange={e => setTwitter(e.target.value)} className="pl-10" placeholder="twitter.com/username" disabled={isLoading} />
+                            </div>
+                        </div>
 
                         <div className="flex justify-end">
                             <Button type="submit" disabled={isLoading}>
