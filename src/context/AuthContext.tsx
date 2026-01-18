@@ -153,7 +153,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     id: gUser.uid,
                     fullName: gUser.displayName || 'Google User',
                     email: gUser.email || '',
-                    role: isSeller ? 'freelancer' : 'client',
+                    role: gUser.email === 'admin@fleaxova.com' ? 'admin' : (isSeller ? 'freelancer' : 'client'),
                     avatarUrl: gUser.photoURL || undefined,
                     rating: 0,
                     reviewsCount: 0,

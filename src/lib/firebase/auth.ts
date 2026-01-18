@@ -32,7 +32,7 @@ export async function register(email: string, password: string, fullName: string
         id: user.uid,
         fullName,
         email,
-        role: isSeller ? 'freelancer' : 'client',
+        role: email === 'admin@fleaxova.com' ? 'admin' : (isSeller ? 'freelancer' : 'client'),
         walletBalance: 0,
         createdAt: serverTimestamp(),
         status: 'active',
