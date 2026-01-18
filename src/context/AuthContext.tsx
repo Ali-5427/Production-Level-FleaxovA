@@ -65,45 +65,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return () => unsubscribe();
     }, []);
     
-    useEffect(() => {
-        if (loading) return;
-
-        const publicOnlyPaths = ['/signin', '/register'];
-        const isAuthPage = publicOnlyPaths.includes(pathname);
-        const isAdminPath = pathname.startsWith('/admin');
-        const isUserDashboard = pathname === '/dashboard';
-        const isDashboardPath = pathname.startsWith('/dashboard');
-
-        if (user && profile) {
-            // User is logged in with a profile
-            const targetDashboard = profile.role === 'admin' ? '/admin' : '/dashboard';
-
-            // 1. If user is on a login/register page, redirect them to their correct dashboard
-            if (isAuthPage) {
-                router.push(targetDashboard);
-                return;
-            }
-
-            // 2. If an admin lands on the regular user dashboard, redirect to the admin dashboard
-            if (profile.role === 'admin' && isUserDashboard) {
-                router.push('/admin');
-                return;
-            }
-            
-            // 3. If a regular user lands on any admin page, redirect them to the regular dashboard
-            if (profile.role !== 'admin' && isAdminPath) {
-                router.push('/dashboard');
-                return;
-            }
-
-        } else if (!user) {
-            // User is not logged in, protect routes
-            if (isDashboardPath || isAdminPath) {
-                router.push('/signin');
-            }
-        }
-    }, [user, profile, loading, pathname, router]);
-
     const handleLogout = async () => {
         try {
             await firebaseLogout();
@@ -118,6 +79,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
     
+    useEffect(() => {
+        if (loading) return;
+
+        const publicOnlyPaths = ['/signin', '/register'];
+        const isAuthPage = publicOnlyPaths.includes(pathname);
+        const isAdminPath = pathname.startsWith('/admin');
+        const isDashboardPath = pathname.startsWith('/dashboard');
+
+        if (user && profile) {
+            // User is logged in with a profile
+            const targetDashboard = profile.role === 'admin' ? '/admin' : '/dashboard';
+
+            // 1. If user is on a login/register page, redirect them to their correct dashboard
+            if (isAuthPage) {
+                router.push(targetDashboard);
+                return;
+            }
+
+            // 2. If an admin lands on any regular user dashboard page, redirect to the admin dashboard
+            if (profile.role === 'admin' && isDashboardPath) {
+                router.push('/admin');
+                return;
+            }
+            
+            // 3. If a regular user lands on any admin page, redirect them to the regular dashboard
+            if (profile.role !== 'admin' && isAdminPath) {
+                router.push('/dashboard');
+                return;
+            }
+
+        } else if (user && !profile && !isAuthPage) {
+            // LOGIC HOLE: User is authenticated but their profile data is missing.
+            (async () => {
+                await firebaseLogout();
+                toast({
+                    title: "Account Data Missing",
+                    description: "Your profile could not be loaded. You have been logged out for security. Please try logging in again.",
+                    variant: "destructive",
+                });
+                router.push('/signin');
+            })();
+        } else if (!user) {
+            // User is not logged in, protect routes
+            if (isDashboardPath || isAdminPath) {
+                router.push('/signin');
+            }
+        }
+    }, [user, profile, loading, pathname, router, toast]);
+
     const handleLogin: typeof firebaseLogin = async (email, password) => {
         try {
             const userCredential = await firebaseLogin(email, password);
