@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -58,12 +59,6 @@ export default function AdminLayout({
                     ))}
                 </nav>
                 <div className="mt-auto p-2 border-t">
-                     <Link href="/dashboard" passHref>
-                        <Button variant="ghost" className="w-full justify-start gap-3">
-                            <LayoutGrid className="h-4 w-4" />
-                            Back to App
-                        </Button>
-                     </Link>
                     <Button variant="ghost" className="w-full justify-start gap-3" onClick={logout}>
                         <LogOut className="h-4 w-4" />
                         Logout
