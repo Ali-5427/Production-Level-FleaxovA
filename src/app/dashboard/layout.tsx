@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -24,6 +25,7 @@ import {
   Wallet,
   Search,
   Loader2,
+  Package,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -60,6 +62,12 @@ export default function DashboardLayout({
       label: 'Dashboard',
       icon: <LayoutGrid />,
       roles: ['client', 'freelancer', 'admin'],
+    },
+    {
+      href: '/dashboard/my-orders',
+      label: 'My Orders',
+      icon: <Package />,
+      roles: ['client', 'freelancer'],
     },
     {
       href: '/dashboard/services',

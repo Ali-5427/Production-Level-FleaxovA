@@ -90,10 +90,17 @@ export interface Application {
 export interface Order {
   id: string;
   serviceId: string;
+  serviceTitle: string;
+  serviceImageUrl?: string;
   clientId: string;
+  clientName: string;
+  clientAvatarUrl?: string;
   freelancerId: string;
+  freelancerName: string;
+  freelancerAvatarUrl?: string;
+  participantIds: string[];
   price: number;
-  createdAt: Date;
+  createdAt: any; // Firestore Timestamp
   paymentId?: string;
   status: 'pending_payment' | 'active' | 'completed' | 'cancelled' | 'disputed' | 'delivered';
 }

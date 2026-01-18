@@ -225,10 +225,89 @@ export async function getUser(userId: string): Promise<User | null> {
     const userDocRef = doc(db, 'users', userId);
     const docSnap = await getDoc(userDocRef);
     if (docSnap.exists()) {
-        return { ...docSnap.data(), id: docSnap.id } as User;
+        const data = docSnap.data();
+        return { 
+            id: docSnap.id,
+             ...data,
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+        } as User;
     }
     return null;
 }
+
+// --- ORDERS ---
+export async function createOrder(service: Service, client: User) {
+    if (service.freelancerId === client.id) {
+        throw new Error("You cannot order your own service.");
+    }
+    const seller = await getUser(service.freelancerId);
+    if (!seller) {
+        throw new Error("Seller not found.");
+    }
+
+    const orderData: Omit<Order, 'id' | 'createdAt'> = {
+        serviceId: service.id,
+        serviceTitle: service.title,
+        serviceImageUrl: service.imageUrl || '',
+        clientId: client.id,
+        clientName: client.fullName,
+        clientAvatarUrl: client.avatarUrl || '',
+        freelancerId: service.freelancerId,
+        freelancerName: seller.fullName,
+        freelancerAvatarUrl: seller.avatarUrl || '',
+        participantIds: [client.id, service.freelancerId],
+        price: service.price,
+        // For this non-payment flow, we'll mark it as 'active' immediately.
+        // In a real scenario, this would be 'pending_payment'.
+        status: 'active', 
+    };
+
+    return await addDoc(collection(db, 'orders'), {
+        ...orderData,
+        createdAt: serverTimestamp()
+    });
+}
+
+export async function getOrdersForUser(userId: string): Promise<Order[]> {
+    const clientQuery = query(collection(db, 'orders'), where('clientId', '==', userId));
+    const freelancerQuery = query(collection(db, 'orders'), where('freelancerId', '==', userId));
+
+    const [clientSnapshot, freelancerSnapshot] = await Promise.all([
+        getDocs(clientQuery),
+        getDocs(freelancerQuery)
+    ]);
+
+    const orders = [
+        ...clientSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)),
+        ...freelancerSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)),
+    ];
+    
+    // Sort by creation date
+    orders.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+    // Convert timestamps
+    return orders.map(order => ({
+        ...order,
+        createdAt: order.createdAt?.toDate ? order.createdAt.toDate() : new Date(),
+    }));
+}
+
+export async function updateOrderStatus(orderId: string, status: Order['status']) {
+    const orderRef = doc(db, 'orders', orderId);
+    return await updateDoc(orderRef, { status });
+}
+
+export async function hasCompletedOrder(userId: string, serviceId: string): Promise<boolean> {
+    const q = query(
+        collection(db, 'orders'),
+        where('clientId', '==', userId),
+        where('serviceId', '==', serviceId),
+        where('status', '==', 'completed')
+    );
+    const snapshot = await getCountFromServer(q);
+    return snapshot.data().count > 0;
+}
+
 
 // Reviews
 const reviewsCollection = collection(db, 'reviews');

@@ -1,6 +1,7 @@
 
 "use client"
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,18 +9,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Star, Clock } from "lucide-react";
 import Image from "next/image";
-import { getServiceById, getUser } from "@/lib/firebase/firestore";
+import { getServiceById, getUser, createOrder, hasCompletedOrder } from "@/lib/firebase/firestore";
 import type { Service, User } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { AddReviewDialog } from "@/components/reviews/AddReviewDialog";
 import { ServiceReviews } from "@/components/reviews/ServiceReviews";
 
 export default function ServiceDetailPage({ params }: { params: { id: string } }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
   const [service, setService] = useState<Service | null>(null);
   const [seller, setSeller] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isOrdering, setIsOrdering] = useState(false);
+  const [canReview, setCanReview] = useState(false);
   const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0);
   const { id } = params;
 
@@ -33,16 +39,46 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
       if (fetchedService) {
         const fetchedSeller = await getUser(fetchedService.freelancerId);
         setSeller(fetchedSeller);
+        
+        if (user) {
+            const hasOrdered = await hasCompletedOrder(user.uid, fetchedService.id);
+            setCanReview(hasOrdered);
+        }
       }
       setLoading(false);
     };
 
     fetchServiceData();
-  }, [id, reviewRefreshTrigger]);
+  }, [id, reviewRefreshTrigger, user]);
 
   const handleReviewAdded = () => {
     setReviewRefreshTrigger(prev => prev + 1);
   };
+  
+  const handleOrder = async () => {
+      if (!user || !profile) {
+          toast({ title: "Please log in", description: "You need to be logged in to order a service.", variant: "destructive" });
+          router.push('/signin');
+          return;
+      }
+      if (profile.role !== 'client') {
+          toast({ title: "Action not allowed", description: "Only clients can order services.", variant: "destructive" });
+          return;
+      }
+      if (!service) return;
+
+      setIsOrdering(true);
+      try {
+          await createOrder(service, profile);
+          toast({ title: "Order Placed!", description: "Your order has been sent to the freelancer." });
+          router.push('/dashboard/my-orders');
+      } catch (error: any) {
+          toast({ title: "Order Failed", description: error.message, variant: "destructive" });
+      } finally {
+          setIsOrdering(false);
+      }
+  }
+
 
   if (loading) {
     return (
@@ -138,8 +174,15 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
                   <Clock className="w-4 h-4" />
                   <span>{service.deliveryTime} day delivery</span>
               </div>
-              <Button className="w-full" size="lg">Continue (₹{service.price})</Button>
-               {user && user.uid !== service.freelancerId && (
+              <Button 
+                className="w-full" 
+                size="lg"
+                onClick={handleOrder}
+                disabled={isOrdering || (user && user.uid === service.freelancerId)}
+              >
+                  {isOrdering ? 'Placing Order...' : user && user.uid === service.freelancerId ? 'This is Your Service' : `Continue (₹${service.price})`}
+              </Button>
+              {canReview && (
                 <AddReviewDialog service={service} onReviewAdded={handleReviewAdded}>
                     <Button variant="outline" className="w-full mt-4">Leave a Review</Button>
                 </AddReviewDialog>
