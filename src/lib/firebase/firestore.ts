@@ -51,7 +51,8 @@ const db = getDbInstance();
 
 // --- NOTIFICATIONS ---
 export async function createNotification(notificationData: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) {
-    return await addDoc(collection(db, 'notifications'), {
+    const notificationsCollection = collection(db, 'notifications');
+    return await addDoc(notificationsCollection, {
         ...notificationData,
         isRead: false,
         createdAt: serverTimestamp()
@@ -398,7 +399,8 @@ export async function createOrder(service: Service, client: User) {
         sourceId: service.id,
     };
 
-    const newOrderRef = await addDoc(collection(db, 'orders'), {
+    const ordersCollection = collection(db, 'orders');
+    const newOrderRef = await addDoc(ordersCollection, {
         ...orderData,
         createdAt: serverTimestamp()
     });
@@ -545,8 +547,9 @@ export function getConversationsListener(
   userId: string, 
   callback: (conversations: Conversation[]) => void
 ) {
+  const conversationsCollection = collection(db, 'conversations');
   const q = query(
-    collection(db, 'conversations'), 
+    conversationsCollection, 
     where('participants', 'array-contains', userId),
     orderBy('lastUpdatedAt', 'desc')
   );
