@@ -61,7 +61,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser(null);
             setProfile(null);
           }
-          // Once auth state is determined and profile is fetched, stop loading.
           setLoading(false);
         });
     
@@ -152,6 +151,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const handleLogout = async () => {
         try {
             await firebaseLogout();
+            setUser(null);
+            setProfile(null);
             toast({ title: "Logout Successful" });
             router.push('/');
         } catch (error: any) {
