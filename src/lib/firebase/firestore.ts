@@ -17,15 +17,37 @@ import {
   updateDoc,
   getCountFromServer,
   limit,
+  type Firestore,
 } from "firebase/firestore";
 import { app } from "./config";
 import type { Service, Job, User, Application, Review, Conversation, Message, Order, Notification } from '../types';
 
+// This global variable is used to cache the Firestore instance in a development environment
+// to prevent issues with Next.js hot-reloading.
+declare global {
+  // eslint-disable-next-line no-var
+  var __db: Firestore | undefined;
+}
+
+function getDbInstance() {
+    if (process.env.NODE_ENV === 'production') {
+        // In production, we can just initialize it once.
+        return initializeFirestore(app, { ignoreUndefinedProperties: true });
+    } else {
+        // In development, we need to check if the instance already exists.
+        if (!global.__db) {
+            global.__db = initializeFirestore(app, {
+                experimentalForceLongPolling: true,
+                ignoreUndefinedProperties: true,
+            });
+        }
+        return global.__db;
+    }
+}
+
 // Initialize Firestore
-const db = initializeFirestore(app, {
-    experimentalForceLongPolling: true,
-    ignoreUndefinedProperties: true,
-});
+const db = getDbInstance();
+
 
 // --- NOTIFICATIONS ---
 export async function createNotification(notificationData: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) {
@@ -636,9 +658,9 @@ export async function markConversationAsRead(conversationId: string, userId: str
 
 // --- DASHBOARD FUNCTIONS ---
 export async function getFreelancerDashboardData(userId: string) {
-    const servicesQuery = query(servicesCollection, where('freelancerId', '==', userId));
-    const ordersQuery = query(ordersCollection, where('freelancerId', '==', userId));
-    const recentOrdersQuery = query(ordersCollection, where('freelancerId', '==', userId), orderBy('createdAt', 'desc'), limit(5));
+    const servicesQuery = query(collection(db, 'services'), where('freelancerId', '==', userId));
+    const ordersQuery = query(collection(db, 'orders'), where('freelancerId', '==', userId));
+    const recentOrdersQuery = query(collection(db, 'orders'), where('freelancerId', '==', userId), orderBy('createdAt', 'desc'), limit(5));
 
     const [servicesSnapshot, ordersSnapshot, recentOrdersSnapshot] = await Promise.all([
         getCountFromServer(servicesQuery),
@@ -656,9 +678,9 @@ export async function getFreelancerDashboardData(userId: string) {
 }
 
 export async function getClientDashboardData(userId: string) {
-    const jobsQuery = query(jobsCollection, where('clientId', '==', userId));
-    const ordersQuery = query(ordersCollection, where('clientId', '==', userId));
-    const recentOrdersQuery = query(ordersCollection, where('clientId', '==', userId), orderBy('createdAt', 'desc'), limit(5));
+    const jobsQuery = query(collection(db, 'jobs'), where('clientId', '==', userId));
+    const ordersQuery = query(collection(db, 'orders'), where('clientId', '==', userId));
+    const recentOrdersQuery = query(collection(db, 'orders'), where('clientId', '==', userId), orderBy('createdAt', 'desc'), limit(5));
 
     const [jobsSnapshot, ordersSnapshot, recentOrdersSnapshot] = await Promise.all([
         getCountFromServer(jobsQuery),
@@ -737,3 +759,4 @@ export async function updateUserStatus(userId: string, status: 'active' | 'suspe
 
 
 export { db };
+    
