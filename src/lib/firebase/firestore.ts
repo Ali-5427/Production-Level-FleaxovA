@@ -1,6 +1,6 @@
 
 import { 
-  getFirestore,
+  initializeFirestore,
   addDoc,
   collection,
   getDocs,
@@ -22,7 +22,10 @@ import { app } from "./config";
 import type { Service, Job, User, Application, Review, Conversation, Message, Order, Notification } from '../types';
 
 // Initialize Firestore
-const db = getFirestore(app);
+const db = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+    ignoreUndefinedProperties: true,
+});
 
 // --- NOTIFICATIONS ---
 export async function createNotification(notificationData: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) {
