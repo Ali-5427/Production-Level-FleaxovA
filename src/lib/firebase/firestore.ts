@@ -23,10 +23,10 @@ import { app } from "./config";
 import type { Service, Job, User, Application, Review, Conversation, Message, Order, Notification } from '../types';
 
 // This global variable is used to cache the Firestore instance in a development environment
-// to prevent issues with Next.js hot-reloading.
-declare global {
-  // eslint-disable-next-line no-var
-  var __db: Firestore | undefined;
+// to prevent issues with Next.js hot-reloading. Using `globalThis` is the standard
+// way to ensure this works in both server and client environments.
+const globalForDb = globalThis as unknown as {
+    __db?: Firestore
 }
 
 function getDbInstance() {
@@ -35,13 +35,13 @@ function getDbInstance() {
         return initializeFirestore(app, { ignoreUndefinedProperties: true });
     } else {
         // In development, we need to check if the instance already exists.
-        if (!global.__db) {
-            global.__db = initializeFirestore(app, {
+        if (!globalForDb.__db) {
+            globalForDb.__db = initializeFirestore(app, {
                 experimentalForceLongPolling: true,
                 ignoreUndefinedProperties: true,
             });
         }
-        return global.__db;
+        return globalForDb.__db;
     }
 }
 
@@ -87,10 +87,8 @@ export async function markNotificationAsRead(notificationId: string) {
 }
 
 // Services
-const servicesCollection = collection(db, 'services');
-const ordersCollection = collection(db, 'orders');
-
 export async function createService(serviceData: Omit<Service, 'id' | 'createdAt' | 'rating' | 'reviewsCount' | 'freelancerName' | 'freelancerAvatarUrl'>) {
+    const servicesCollection = collection(db, 'services');
     const sellerProfile = await getUser(serviceData.freelancerId);
     if (!sellerProfile) {
         throw new Error("Could not find seller profile to create service.");
@@ -114,6 +112,7 @@ export async function updateService(serviceId: string, serviceData: Partial<Omit
 
 
 export async function getServices(): Promise<Service[]> {
+    const servicesCollection = collection(db, 'services');
     const q = query(servicesCollection, orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => {
@@ -144,6 +143,7 @@ export async function getServiceById(id: string): Promise<Service | null> {
 }
 
 export async function getServicesByFreelancer(freelancerId: string): Promise<Service[]> {
+    const servicesCollection = collection(db, 'services');
     const q = query(servicesCollection, where('freelancerId', '==', freelancerId), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => {
@@ -163,10 +163,8 @@ export async function deleteService(serviceId: string): Promise<void> {
 
 
 // Jobs
-const jobsCollection = collection(db, 'jobs');
-const applicationsCollection = collection(db, 'applications');
-
 export async function createJob(jobData: Omit<Job, 'id' | 'createdAt' | 'status' | 'applicationCount'>) {
+    const jobsCollection = collection(db, 'jobs');
     return await addDoc(jobsCollection, {
         ...jobData,
         status: 'open',
@@ -176,6 +174,7 @@ export async function createJob(jobData: Omit<Job, 'id' | 'createdAt' | 'status'
 }
 
 export async function getJobs(): Promise<Job[]> {
+    const jobsCollection = collection(db, 'jobs');
     const q = query(jobsCollection, where('status', '==', 'open'), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => {
@@ -207,6 +206,7 @@ export async function getJobById(id: string): Promise<Job | null> {
 }
 
 export async function getJobsByClient(clientId: string): Promise<Job[]> {
+    const jobsCollection = collection(db, 'jobs');
     const q = query(jobsCollection, where('clientId', '==', clientId), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => {
@@ -252,12 +252,14 @@ export async function applyToJob(appData: Omit<Application, 'id' | 'createdAt' |
 }
 
 export async function getApplicationsForJob(jobId: string): Promise<Application[]> {
+    const applicationsCollection = collection(db, 'applications');
     const q = query(applicationsCollection, where('jobId', '==', jobId), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
 }
 
 export async function getApplicationsByFreelancer(freelancerId: string): Promise<Application[]> {
+    const applicationsCollection = collection(db, 'applications');
     const q = query(applicationsCollection, where('freelancerId', '==', freelancerId), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => {
@@ -328,6 +330,7 @@ export async function acceptApplication(job: Job, application: Application) {
     });
 
     // For other rejected freelancers
+    const applicationsCollection = collection(db, 'applications');
     const otherAppsQuery = query(
         applicationsCollection,
         where('jobId', '==', job.id),
@@ -411,6 +414,7 @@ export async function createOrder(service: Service, client: User) {
 }
 
 export async function getOrdersForUser(userId: string): Promise<Order[]> {
+    const ordersCollection = collection(db, 'orders');
     const q = query(
         ordersCollection, 
         where('participantIds', 'array-contains', userId), 
@@ -469,9 +473,8 @@ export async function hasCompletedOrder(userId: string, serviceId: string): Prom
 
 
 // Reviews
-const reviewsCollection = collection(db, 'reviews');
-
 export async function getReviewsForService(serviceId: string): Promise<Review[]> {
+    const reviewsCollection = collection(db, 'reviews');
     const q = query(reviewsCollection, where('serviceId', '==', serviceId), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => {
@@ -759,4 +762,5 @@ export async function updateUserStatus(userId: string, status: 'active' | 'suspe
 
 
 export { db };
+    
     
