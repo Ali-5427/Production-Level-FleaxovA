@@ -17,6 +17,7 @@ import {
 import type { User } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
 
+// Define the shape of the context data
 interface AuthContextType {
     user: FirebaseAuthUser | null;
     profile: User | null;
@@ -29,147 +30,107 @@ interface AuthContextType {
     updateProfile: (updates: Partial<User>, newAvatarFile?: File) => Promise<void>;
 }
 
+// Create the context
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const auth = getAuth(app);
 
+// AuthProvider component
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<FirebaseAuthUser | null>(null);
     const [profile, setProfile] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
 
+    // Central listener for auth state changes
     useEffect(() => {
-        // This listener handles auth state changes
-        const authListenerUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-          setLoading(true); // Enter loading state whenever auth state changes
-          if (firebaseUser) {
-            // User is signed in, fetch their profile document
-            const userDocRef = doc(db, 'users', firebaseUser.uid);
-            const docSnap = await getDoc(userDocRef);
-            
-            if (docSnap.exists()) {
-                setProfile(docSnap.data() as User);
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            setLoading(true);
+            if (firebaseUser) {
+                const userDocRef = doc(db, 'users', firebaseUser.uid);
+                const docSnap = await getDoc(userDocRef);
+                
+                setUser(firebaseUser);
+                if (docSnap.exists()) {
+                    setProfile(docSnap.data() as User);
+                } else {
+                    setProfile(null);
+                }
             } else {
-                // This might happen if the user record isn't created yet during registration.
+                setUser(null);
                 setProfile(null);
             }
-            setUser(firebaseUser); // Set the Firebase user object
-          } else {
-            // User is signed out
-            setUser(null);
-            setProfile(null);
-          }
-          setLoading(false); // Exit loading state after all async operations and state updates
+            setLoading(false);
+            if (isInitialLoad) {
+                setIsInitialLoad(false);
+            }
         });
-    
-        // Cleanup the listener when the component unmounts
-        return () => {
-          authListenerUnsubscribe();
-        };
-    }, []); // Empty dependency array ensures this runs only once on mount
 
-    // This effect handles route protection and redirection logic
+        return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Effect for handling redirection logic and success toasts
     useEffect(() => {
-        if (loading) return; // Don't run routing logic until auth state is determined
+        if (loading || isInitialLoad) return;
 
         const publicOnlyPaths = ['/signin', '/register'];
         const isAuthPage = publicOnlyPaths.includes(pathname);
-        const isAdminPath = pathname.startsWith('/admin');
-        const isDashboardPath = pathname.startsWith('/dashboard');
 
         if (user && profile) {
-            // User is logged in with a profile
             const targetDashboard = profile.role === 'admin' ? '/admin' : '/dashboard';
-
-            if (isAuthPage) {
-                router.push(targetDashboard);
-                return;
-            }
-
-            if (profile.role === 'admin' && isDashboardPath) {
-                router.push('/admin');
-                return;
-            }
             
-            if (profile.role !== 'admin' && isAdminPath) {
-                router.push('/dashboard');
-                return;
+            if (isAuthPage) {
+                toast({ title: "Success!", description: "You are now logged in." });
+                router.push(targetDashboard);
             }
-
         } else if (!user) {
-            // User is not logged in, protect routes
-            if (isDashboardPath || isAdminPath) {
+            if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) {
                 router.push('/signin');
             }
         }
-    }, [user, profile, loading, pathname, router]);
+    }, [user, profile, loading, isInitialLoad, pathname, router, toast]);
 
     const handleLogin = async (email: string, password: string) => {
         try {
             await firebaseLogin(email, password);
-            toast({ title: "Login Successful", description: "Welcome back!" });
-            // Redirection is handled by the useEffect hook
         } catch (error: any) {
-            let description = "An unexpected error occurred.";
-            if (error.code === 'auth/invalid-credential') {
-                description = "Invalid email or password. Please try again.";
-            } else {
-                description = error.message;
-            }
-             toast({
-                title: "Login Failed",
-                description: description,
-                variant: "destructive"
-            });
-             throw error;
+            const description = error.code === 'auth/invalid-credential'
+                ? "Invalid email or password. Please try again."
+                : error.message;
+            toast({ title: "Login Failed", description, variant: "destructive" });
+            throw error;
         }
-    }
+    };
 
     const handleRegister = async (email: string, password: string, fullName: string, isSeller: boolean) => {
         try {
             await firebaseRegister(email, password, fullName, isSeller);
-            toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
-             // Redirection is handled by the useEffect hook
         } catch (error: any) {
-             let description = "An unexpected error occurred.";
-            if (error.code === 'auth/email-already-in-use') {
-                description = "This email is already in use. Please log in or use a different email.";
-            } else {
-                description = error.message;
-            }
-             toast({
-                title: "Registration Failed",
-                description: description,
-                variant: "destructive"
-            });
-             throw error;
+            const description = error.code === 'auth/email-already-in-use'
+                ? "This email is already in use. Please log in or use a different email."
+                : error.message;
+            toast({ title: "Registration Failed", description, variant: "destructive" });
+            throw error;
         }
-    }
+    };
 
     const handleLogout = async () => {
         setUser(null);
         setProfile(null);
-        try {
-            await firebaseLogout();
-            toast({ title: "Logout Successful" });
-            router.push('/');
-        } catch (error: any) {
-             toast({
-                title: "Logout Failed",
-                description: error.message,
-                variant: "destructive"
-            });
-        }
+        await firebaseLogout();
+        router.push('/');
+        toast({ title: "Logout Successful" });
     };
-
-    const handleRegisterWithGoogle = async (isSeller: boolean) => {
+    
+    const handleGoogleAuth = async (isRegister: boolean, isSeller?: boolean) => {
         try {
             const userCredential = await signInWithGoogle();
             const gUser = userCredential.user;
-
+            
             const userDocRef = doc(db, "users", gUser.uid);
             const userDoc = await getDoc(userDocRef);
 
@@ -180,60 +141,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     email: gUser.email || '',
                     role: gUser.email === 'admin@fleaxova.com' ? 'admin' : (isSeller ? 'freelancer' : 'client'),
                     avatarUrl: gUser.photoURL || undefined,
-                    rating: 0,
-                    reviewsCount: 0,
-                    walletBalance: 0,
-                    createdAt: serverTimestamp(),
-                    status: 'active',
+                    rating: 0, reviewsCount: 0, walletBalance: 0,
+                    createdAt: serverTimestamp(), status: 'active',
                 };
                 await setDoc(userDocRef, newUser);
             }
-            toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
-            // Redirection is handled by the useEffect hook
-
         } catch (error: any) {
-             toast({
-                title: "Registration Failed",
-                description: error.message,
-                variant: "destructive"
-            });
-             throw error;
-        }
-    };
-
-    const handleLoginWithGoogle = async () => {
-        try {
-            await signInWithGoogle();
-            toast({ title: "Login Successful", description: "Welcome back!" });
-            // Redirection is handled by the useEffect hook
-        } catch (error: any) {
-            toast({
-                title: "Login Failed",
-                description: error.message,
-                variant: "destructive",
-            });
+            toast({ title: isRegister ? "Registration Failed" : "Login Failed", description: error.message, variant: "destructive" });
             throw error;
         }
     };
 
+    const handleRegisterWithGoogle = (isSeller: boolean) => handleGoogleAuth(true, isSeller);
+    const handleLoginWithGoogle = () => handleGoogleAuth(false);
+
     const handleUpdateProfile = async (updates: Partial<User>, newAvatarFile?: File) => {
-        if (!user || !profile) {
-            toast({ title: "Update Failed", description: "You must be logged in to update your profile.", variant: "destructive" });
-            throw new Error("User not authenticated");
-        }
+        if (!user) throw new Error("User not authenticated");
         try {
             const updatedProfileFields = await updateUserProfile(user, updates, newAvatarFile);
-            
-            setProfile(prevProfile => ({ ...prevProfile!, ...updatedProfileFields }));
-            setUser(auth.currentUser); // Refresh user to get new photoURL
-            
+            setProfile(prevProfile => prevProfile ? { ...prevProfile, ...updatedProfileFields } : null);
+            setUser(auth.currentUser);
             toast({ title: "Profile Updated", description: "Your changes have been saved." });
         } catch (error: any) {
-            toast({
-                title: "Update Failed",
-                description: error.message || "Could not update profile.",
-                variant: "destructive"
-            });
+            toast({ title: "Update Failed", description: error.message || "Could not update profile.", variant: "destructive" });
             throw error;
         }
     };
@@ -250,9 +180,5 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updateProfile: handleUpdateProfile,
     };
 
-    return (
-        <AuthContext.Provider value={value}>
-            {children}
-        </AuthContext.Provider>
-    );
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
