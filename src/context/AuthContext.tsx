@@ -44,24 +44,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         // This listener handles auth state changes
         const authListenerUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          setLoading(true); // Enter loading state whenever auth state changes
           if (firebaseUser) {
             // User is signed in, fetch their profile document
             const userDocRef = doc(db, 'users', firebaseUser.uid);
             const docSnap = await getDoc(userDocRef);
             
-            setUser(firebaseUser); // Set the Firebase user object
             if (docSnap.exists()) {
-                setProfile(docSnap.data() as User); // Set the Firestore profile
+                setProfile(docSnap.data() as User);
             } else {
                 // This might happen if the user record isn't created yet during registration.
                 setProfile(null);
             }
+            setUser(firebaseUser); // Set the Firebase user object
           } else {
             // User is signed out
             setUser(null);
             setProfile(null);
           }
-          setLoading(false);
+          setLoading(false); // Exit loading state after all async operations and state updates
         });
     
         // Cleanup the listener when the component unmounts
@@ -104,7 +105,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 router.push('/signin');
             }
         }
-    }, [user, profile, loading, pathname, router, toast]);
+    }, [user, profile, loading, pathname, router]);
 
     const handleLogin = async (email: string, password: string) => {
         try {
@@ -149,10 +150,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const handleLogout = async () => {
+        setUser(null);
+        setProfile(null);
         try {
             await firebaseLogout();
-            setUser(null);
-            setProfile(null);
             toast({ title: "Logout Successful" });
             router.push('/');
         } catch (error: any) {
@@ -186,7 +187,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     status: 'active',
                 };
                 await setDoc(userDocRef, newUser);
-                setProfile(newUser);
             }
             toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
             // Redirection is handled by the useEffect hook
