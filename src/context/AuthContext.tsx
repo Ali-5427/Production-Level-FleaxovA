@@ -4,7 +4,7 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getAuth, onAuthStateChanged, User as FirebaseAuthUser } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { app } from '@/lib/firebase/config';
 import { db } from '@/lib/firebase/firestore';
 import { 
@@ -21,9 +21,9 @@ interface AuthContextType {
     user: FirebaseAuthUser | null;
     profile: User | null;
     loading: boolean;
-    login: typeof firebaseLogin;
+    login: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
-    register: typeof firebaseRegister;
+    register: (email: string, password: string, fullName: string, isSeller: boolean) => Promise<void>;
     registerWithGoogle: (isSeller: boolean) => Promise<void>;
     loginWithGoogle: () => Promise<void>;
     updateProfile: (updates: Partial<User>, newAvatarFile?: File) => Promise<void>;
@@ -42,31 +42,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { toast } = useToast();
 
     useEffect(() => {
-        let profileListenerUnsubscribe: (() => void) | null = null;
-    
-        const authListenerUnsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-          if (profileListenerUnsubscribe) {
-            profileListenerUnsubscribe(); // Clean up old profile listener
-          }
-    
+        const authListenerUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
           if (firebaseUser) {
             setUser(firebaseUser);
-            // setLoading(true) is important here to wait for profile
-            setLoading(true); 
-            profileListenerUnsubscribe = onSnapshot(
-              doc(db, 'users', firebaseUser.uid),
-              (doc) => {
-                setProfile(doc.exists() ? (doc.data() as User) : null);
-                setLoading(false);
-              },
-              (error) => {
-                console.error("Error listening to profile:", error);
+            setLoading(true);
+            const userDocRef = doc(db, 'users', firebaseUser.uid);
+            try {
+                const docSnap = await getDoc(userDocRef);
+                setProfile(docSnap.exists() ? (docSnap.data() as User) : null);
+            } catch (error) {
+                console.error("Error fetching user profile:", error);
                 setProfile(null);
+            } finally {
                 setLoading(false);
-              }
-            );
+            }
           } else {
-            // No user, clear state
             setUser(null);
             setProfile(null);
             setLoading(false);
@@ -75,9 +65,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
         return () => {
           authListenerUnsubscribe();
-          if (profileListenerUnsubscribe) {
-            profileListenerUnsubscribe();
-          }
         };
       }, []);
     
@@ -136,12 +123,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // which fixes the registration race condition.
     }, [user, profile, loading, pathname, router, toast]);
 
-    const handleLogin: typeof firebaseLogin = async (email, password) => {
+    const handleLogin = async (email: string, password: string) => {
         try {
-            const userCredential = await firebaseLogin(email, password);
+            await firebaseLogin(email, password);
             toast({ title: "Login Successful", description: "Welcome back!" });
             // Redirection is now handled by the useEffect hook
-            return userCredential;
         } catch (error: any) {
             let description = "An unexpected error occurred.";
             if (error.code === 'auth/invalid-credential') {
@@ -154,15 +140,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 description: description,
                 variant: "destructive"
             });
+             throw error;
         }
     }
 
-    const handleRegister: typeof firebaseRegister = async (email, password, fullName, isSeller) => {
+    const handleRegister = async (email: string, password: string, fullName: string, isSeller: boolean) => {
         try {
-            const userCredential = await firebaseRegister(email, password, fullName, isSeller);
+            await firebaseRegister(email, password, fullName, isSeller);
             toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
              // Redirection is now handled by the useEffect hook
-            return userCredential;
         } catch (error: any) {
              let description = "An unexpected error occurred.";
             if (error.code === 'auth/email-already-in-use') {
@@ -175,6 +161,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 description: description,
                 variant: "destructive"
             });
+             throw error;
         }
     }
 
@@ -211,6 +198,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 description: error.message,
                 variant: "destructive"
             });
+             throw error;
         }
     };
 
@@ -225,6 +213,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 description: error.message,
                 variant: "destructive",
             });
+            throw error;
         }
     };
 
