@@ -42,48 +42,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { toast } = useToast();
 
     useEffect(() => {
+        // This listener handles auth state changes
         const authListenerUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
           if (firebaseUser) {
-            setUser(firebaseUser);
-            setLoading(true);
+            // User is signed in, fetch their profile document
             const userDocRef = doc(db, 'users', firebaseUser.uid);
-            try {
-                const docSnap = await getDoc(userDocRef);
-                setProfile(docSnap.exists() ? (docSnap.data() as User) : null);
-            } catch (error) {
-                console.error("Error fetching user profile:", error);
+            const docSnap = await getDoc(userDocRef);
+            
+            setUser(firebaseUser); // Set the Firebase user object
+            if (docSnap.exists()) {
+                setProfile(docSnap.data() as User); // Set the Firestore profile
+            } else {
+                // This might happen if the user record isn't created yet during registration.
                 setProfile(null);
-            } finally {
-                setLoading(false);
             }
           } else {
+            // User is signed out
             setUser(null);
             setProfile(null);
-            setLoading(false);
           }
+          // Once auth state is determined and profile is fetched, stop loading.
+          setLoading(false);
         });
     
+        // Cleanup the listener when the component unmounts
         return () => {
           authListenerUnsubscribe();
         };
-      }, []);
-    
-    const handleLogout = async () => {
-        try {
-            await firebaseLogout();
-            toast({ title: "Logout Successful" });
-            router.push('/');
-        } catch (error: any) {
-             toast({
-                title: "Logout Failed",
-                description: error.message,
-                variant: "destructive"
-            });
-        }
-    };
-    
+    }, []); // Empty dependency array ensures this runs only once on mount
+
+    // This effect handles route protection and redirection logic
     useEffect(() => {
-        if (loading) return;
+        if (loading) return; // Don't run routing logic until auth state is determined
 
         const publicOnlyPaths = ['/signin', '/register'];
         const isAuthPage = publicOnlyPaths.includes(pathname);
@@ -94,19 +84,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // User is logged in with a profile
             const targetDashboard = profile.role === 'admin' ? '/admin' : '/dashboard';
 
-            // 1. If user is on a login/register page, redirect them to their correct dashboard
             if (isAuthPage) {
                 router.push(targetDashboard);
                 return;
             }
 
-            // 2. If an admin lands on any regular user dashboard page, redirect to the admin dashboard
             if (profile.role === 'admin' && isDashboardPath) {
                 router.push('/admin');
                 return;
             }
             
-            // 3. If a regular user lands on any admin page, redirect them to the regular dashboard
             if (profile.role !== 'admin' && isAdminPath) {
                 router.push('/dashboard');
                 return;
@@ -118,16 +105,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 router.push('/signin');
             }
         }
-        // The case where (user && !profile) is now implicitly handled. 
-        // The app will show a loading state until the profile listener resolves, 
-        // which fixes the registration race condition.
     }, [user, profile, loading, pathname, router, toast]);
 
     const handleLogin = async (email: string, password: string) => {
         try {
             await firebaseLogin(email, password);
             toast({ title: "Login Successful", description: "Welcome back!" });
-            // Redirection is now handled by the useEffect hook
+            // Redirection is handled by the useEffect hook
         } catch (error: any) {
             let description = "An unexpected error occurred.";
             if (error.code === 'auth/invalid-credential') {
@@ -148,7 +132,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             await firebaseRegister(email, password, fullName, isSeller);
             toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
-             // Redirection is now handled by the useEffect hook
+             // Redirection is handled by the useEffect hook
         } catch (error: any) {
              let description = "An unexpected error occurred.";
             if (error.code === 'auth/email-already-in-use') {
@@ -164,6 +148,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
              throw error;
         }
     }
+
+    const handleLogout = async () => {
+        try {
+            await firebaseLogout();
+            toast({ title: "Logout Successful" });
+            router.push('/');
+        } catch (error: any) {
+             toast({
+                title: "Logout Failed",
+                description: error.message,
+                variant: "destructive"
+            });
+        }
+    };
 
     const handleRegisterWithGoogle = async (isSeller: boolean) => {
         try {
@@ -190,7 +188,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setProfile(newUser);
             }
             toast({ title: "Registration Successful", description: "Welcome to Fleaxova!" });
-            // Redirection is now handled by the useEffect hook
+            // Redirection is handled by the useEffect hook
 
         } catch (error: any) {
              toast({
@@ -206,7 +204,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             await signInWithGoogle();
             toast({ title: "Login Successful", description: "Welcome back!" });
-            // Redirection is now handled by the useEffect hook
+            // Redirection is handled by the useEffect hook
         } catch (error: any) {
             toast({
                 title: "Login Failed",
