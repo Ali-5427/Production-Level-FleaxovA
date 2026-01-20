@@ -10,8 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Github, Linkedin, Star, Twitter, Edit, Trash2, PlusCircle } from "lucide-react";
-import type { PortfolioItem } from "@/lib/types"; // Import the new type
-import { PortfolioFormDialog } from "@/components/profile/PortfolioFormDialog"; // Import the new dialog
+import type { PortfolioItem } from "@/lib/types";
+import { PortfolioFormDialog } from "@/components/profile/PortfolioFormDialog";
 
 export default function ProfilePage() {
     const { user, profile, updateProfile } = useAuth();
@@ -66,21 +66,15 @@ export default function ProfilePage() {
         e.preventDefault();
         setIsLoading(true);
         try {
-            // Sanitize portfolio data before sending it to Firestore to prevent errors.
-            // Firestore does not allow 'undefined' values inside arrays.
-            const sanitizedPortfolio = portfolio.map(item => {
-                const cleanItem: Partial<PortfolioItem> = {
-                    id: item.id,
-                    title: item.title,
-                    description: item.description,
-                    url: item.url || '', // Ensure url is not undefined
-                };
-                // Only include imageUrl if it has a value
-                if (item.imageUrl) {
-                    cleanItem.imageUrl = item.imageUrl;
-                }
-                return cleanItem as PortfolioItem;
-            });
+            // Sanitize portfolio data to prevent Firestore errors by removing any 'undefined' properties.
+            const sanitizedPortfolio = portfolio.map(item => ({
+                id: item.id,
+                title: item.title,
+                description: item.description,
+                url: item.url || '',
+                // Conditionally add imageUrl only if it has a value
+                ...(item.imageUrl && { imageUrl: item.imageUrl }),
+            }));
 
             const profileUpdates = {
                 fullName,
@@ -88,7 +82,7 @@ export default function ProfilePage() {
                 bio,
                 skills: skills.split(',').map(s => s.trim()).filter(Boolean),
                 socialLinks: { github, linkedin, twitter },
-                portfolio: sanitizedPortfolio, // Use the sanitized portfolio array
+                portfolio: sanitizedPortfolio,
             };
             await updateProfile(profileUpdates, avatarFile);
         } catch (error) {
@@ -275,12 +269,6 @@ export default function ProfilePage() {
                         </Card>
                     </>
                  )}
-
-                <div className="flex justify-end">
-                    <Button type="submit" disabled={isLoading}>
-                        {isLoading ? 'Saving...' : 'Save All Changes'}
-                    </Button>
-                </div>
             </form>
         </div>
     )
