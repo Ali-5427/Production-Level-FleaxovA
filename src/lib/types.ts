@@ -1,4 +1,13 @@
 
+// Add a new interface for a single portfolio item
+export interface PortfolioItem {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  imageUrl?: string;
+}
+
 // Base user from Firebase Authentication
 export interface AuthUser {
   uid: string;
@@ -20,12 +29,7 @@ export interface User {
   bio?: string;
   skills?: string[];
   avatarUrl?: string;
-  portfolio?: {
-      title: string;
-      description: string;
-      url: string;
-      imageUrl?: string;
-  }[];
+  portfolio?: PortfolioItem[]; // Use the new interface
   socialLinks?: {
       github?: string;
       linkedin?: string;
