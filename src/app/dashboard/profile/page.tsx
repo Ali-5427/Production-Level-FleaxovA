@@ -66,13 +66,29 @@ export default function ProfilePage() {
         e.preventDefault();
         setIsLoading(true);
         try {
+            // Sanitize portfolio data before sending it to Firestore to prevent errors.
+            // Firestore does not allow 'undefined' values inside arrays.
+            const sanitizedPortfolio = portfolio.map(item => {
+                const cleanItem: Partial<PortfolioItem> = {
+                    id: item.id,
+                    title: item.title,
+                    description: item.description,
+                    url: item.url || '', // Ensure url is not undefined
+                };
+                // Only include imageUrl if it has a value
+                if (item.imageUrl) {
+                    cleanItem.imageUrl = item.imageUrl;
+                }
+                return cleanItem as PortfolioItem;
+            });
+
             const profileUpdates = {
                 fullName,
                 title,
                 bio,
                 skills: skills.split(',').map(s => s.trim()).filter(Boolean),
                 socialLinks: { github, linkedin, twitter },
-                portfolio, // Include portfolio in the update
+                portfolio: sanitizedPortfolio, // Use the sanitized portfolio array
             };
             await updateProfile(profileUpdates, avatarFile);
         } catch (error) {
@@ -95,7 +111,7 @@ export default function ProfilePage() {
             updatedPortfolio = portfolio.map(p => p.id === itemData.id ? { ...p, ...itemData } as PortfolioItem : p);
         } else { // Adding new item
             const newItem: PortfolioItem = {
-                id: new Date().toISOString(), // Simple unique ID
+                id: `temp_${new Date().getTime()}_${Math.floor(Math.random() * 1000)}`, // More unique temporary ID for client-side key
                 ...itemData,
             } as PortfolioItem;
             updatedPortfolio = [...portfolio, newItem];
