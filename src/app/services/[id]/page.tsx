@@ -10,12 +10,31 @@ import { Separator } from "@/components/ui/separator";
 import { Star, Clock } from "lucide-react";
 import Image from "next/image";
 import { getServiceById, getUser, createPendingOrderForService, hasCompletedOrder } from "@/lib/firebase/firestore";
-import type { Service, User } from "@/lib/types";
+import type { Service, User, Order } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { AddReviewDialog } from "@/components/reviews/AddReviewDialog";
 import { ServiceReviews } from "@/components/reviews/ServiceReviews";
+import { useRazorpay } from "@/hooks/use-razorpay";
+import axios from 'axios';
+
+// Add this interface
+interface RazorpayOrderResponse {
+    id: string;
+    entity: string;
+    amount: number;
+    amount_paid: number;
+    amount_due: number;
+    currency: string;
+    receipt: string;
+    offer_id: string | null;
+    status: string;
+    attempts: number;
+    notes: any[];
+    created_at: number;
+}
+
 
 export default function ServiceDetailPage({ params }: { params: { id: string } }) {
   const { user, profile } = useAuth();
@@ -27,7 +46,14 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
   const [isOrdering, setIsOrdering] = useState(false);
   const [canReview, setCanReview] = useState(false);
   const [reviewRefreshTrigger, setReviewRefreshTrigger] = useState(0);
+  const { isLoaded: isRazorpayLoaded, error: razorpayError } = useRazorpay();
   const { id } = params;
+
+  useEffect(() => {
+    if (razorpayError) {
+        toast({ title: 'Payment Gateway Error', description: razorpayError, variant: 'destructive' });
+    }
+  }, [razorpayError, toast]);
 
   useEffect(() => {
     if (!id) return;
@@ -66,23 +92,77 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
           return;
       }
       if (!service) return;
+      if (!isRazorpayLoaded) {
+          toast({ title: 'Payment Gateway Loading', description: 'Please wait a moment for the payment gateway to load.', variant: 'default' });
+          return;
+      }
 
       setIsOrdering(true);
       try {
+          // Step 1: Create a pending order in our database
           const pendingOrder = await createPendingOrderForService(service, profile);
           
-          toast({
-            title: "Order Created",
-            description: "Proceeding to payment...",
+          toast({ title: "Order Created", description: "Redirecting to payment..." });
+
+          // Step 2: Create a Razorpay order from our backend
+          const { data: { order: razorpayOrder } }: { data: { order: RazorpayOrderResponse } } = await axios.post('/api/razorpay/create-order', {
+              amount: pendingOrder.price,
           });
 
-          // This is where Phase 3 (Razorpay integration) will be triggered.
-          // For now, we'll just log the created pending order.
-          console.log("Created pending order, ready for payment:", pendingOrder);
+          // Step 3: Configure and open Razorpay Checkout
+          const options = {
+              key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+              amount: razorpayOrder.amount,
+              currency: "INR",
+              name: "Fleaxova",
+              description: `Order for: ${service.title}`,
+              image: "/logo.png", // Add a logo if available
+              order_id: razorpayOrder.id,
+              handler: async function (response: any) {
+                  // Step 4: Verify payment on our backend
+                  try {
+                      await axios.post('/api/razorpay/verify-payment', {
+                          ...response,
+                          orderId: pendingOrder.id // Pass our internal order ID
+                      });
+                      toast({ title: 'Payment Successful!', description: 'Your order is now active.' });
+                      router.push('/dashboard/my-orders');
+                  } catch (verificationError) {
+                      console.error("Payment verification failed", verificationError);
+                      toast({ title: 'Payment Verification Failed', description: 'Your payment was successful but we could not verify it. Please contact support.', variant: 'destructive' });
+                  }
+              },
+              prefill: {
+                  name: profile.fullName,
+                  email: profile.email,
+              },
+              notes: {
+                  firestore_order_id: pendingOrder.id,
+              },
+              theme: {
+                  color: "#000000"
+              },
+              modal: {
+                  ondismiss: function() {
+                      toast({ title: 'Payment Cancelled', description: 'Your order is still pending. You can try to pay again from your dashboard.', variant: 'destructive'});
+                      setIsOrdering(false);
+                  }
+              },
+              method: {
+                  netbanking: false,
+                  card: true,
+                  upi: true,
+                  wallet: false,
+              }
+          };
+
+          const rzp = new window.Razorpay(options);
+          rzp.open();
 
       } catch (error: any) {
-          toast({ title: "Order Failed", description: error.message, variant: "destructive" });
-      } finally {
+          console.error("Order process failed:", error);
+          const errorMessage = error.response?.data?.error || 'Could not initiate payment. Please try again.';
+          toast({ title: "Order Failed", description: errorMessage, variant: "destructive" });
           setIsOrdering(false);
       }
   }
@@ -186,9 +266,9 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
                 className="w-full" 
                 size="lg"
                 onClick={handleOrder}
-                disabled={isOrdering || (user && user.uid === service.freelancerId)}
+                disabled={isOrdering || (user && user.uid === service.freelancerId) || !isRazorpayLoaded}
               >
-                  {isOrdering ? 'Placing Order...' : user && user.uid === service.freelancerId ? 'This is Your Service' : `Continue (₹${service.price})`}
+                  {isOrdering ? 'Processing...' : user && user.uid === service.freelancerId ? 'This is Your Service' : `Continue (₹${service.price})`}
               </Button>
               {canReview && (
                 <AddReviewDialog service={service} onReviewAdded={handleReviewAdded}>
