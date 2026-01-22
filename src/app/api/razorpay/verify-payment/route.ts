@@ -1,9 +1,9 @@
 
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { db, createNotification } from '@/lib/firebase/firestore';
-import type { Order } from '@/lib/types';
+import type { Order, User } from '@/lib/types';
 import { z } from 'zod';
 
 const verificationSchema = z.object({
@@ -14,63 +14,91 @@ const verificationSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const {
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature,
-        orderId,
-    } = verificationSchema.parse(body);
+    try {
+        const body = await request.json();
+        const {
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature,
+            orderId,
+        } = verificationSchema.parse(body);
 
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    if (!keySecret) {
-        throw new Error("Razorpay key secret is not configured.");
+        const keySecret = process.env.RAZORPAY_KEY_SECRET;
+        if (!keySecret) {
+            throw new Error("Razorpay key secret is not configured.");
+        }
+
+        // 1. Verify Razorpay signature
+        const signatureString = `${razorpay_order_id}|${razorpay_payment_id}`;
+        const expectedSignature = crypto
+            .createHmac('sha256', keySecret)
+            .update(signatureString)
+            .digest('hex');
+
+        if (expectedSignature !== razorpay_signature) {
+            return NextResponse.json({ success: false, error: 'Invalid payment signature.' }, { status: 400 });
+        }
+
+        // 2. Run Firestore transaction to update order and freelancer wallet
+        const order = await runTransaction(db, async (transaction) => {
+            const orderRef = doc(db, 'orders', orderId);
+            const orderDoc = await transaction.get(orderRef);
+
+            if (!orderDoc.exists() || orderDoc.data().status !== 'pending_payment') {
+                throw new Error('Order not found or already processed.');
+            }
+
+            const orderData = orderDoc.data() as Order;
+
+            const freelancerRef = doc(db, 'users', orderData.freelancerId);
+            const freelancerDoc = await transaction.get(freelancerRef);
+
+            if (!freelancerDoc.exists()) {
+                throw new Error('Freelancer account not found.');
+            }
+            
+            const freelancerData = freelancerDoc.data() as User;
+            const newWalletBalance = (freelancerData.walletBalance || 0) + (orderData.freelancerEarning || 0);
+
+            // Update order
+            transaction.update(orderRef, {
+                status: 'active',
+                paymentId: razorpay_payment_id,
+            });
+
+            // Update freelancer wallet
+            transaction.update(freelancerRef, {
+                walletBalance: newWalletBalance
+            });
+
+            return orderData;
+        });
+
+        // 3. Create notifications (outside of the transaction for efficiency)
+        await Promise.all([
+            // For freelancer
+            createNotification({
+                userId: order.freelancerId,
+                type: 'new_order',
+                content: `You have a new order from ${order.clientName} for "${order.title}". Your wallet has been credited ₹${order.freelancerEarning?.toFixed(2)}.`,
+                link: `/dashboard/my-orders`,
+            }),
+            // For client
+            createNotification({
+                userId: order.clientId,
+                type: 'order_completed', // Using 'order_completed' for its checkmark icon
+                content: `Your payment for "${order.title}" was successful. The order is now active.`,
+                link: `/dashboard/my-orders`,
+            })
+        ]);
+
+        return NextResponse.json({ success: true, message: 'Payment verified and order activated successfully.' });
+
+    } catch (error: any) {
+        console.error('Payment verification failed:', error);
+        if (error instanceof z.ZodError) {
+            return NextResponse.json({ success: false, error: 'Invalid input data.' }, { status: 400 });
+        }
+        return NextResponse.json({ success: false, error: error.message || 'Internal Server Error' }, { status: 500 });
     }
-    
-    // Create the signature string
-    const signatureString = `${razorpay_order_id}|${razorpay_payment_id}`;
-    
-    // Generate the expected signature
-    const expectedSignature = crypto
-      .createHmac('sha256', keySecret)
-      .update(signatureString)
-      .digest('hex');
-
-    // Compare signatures
-    if (expectedSignature !== razorpay_signature) {
-      return NextResponse.json({ success: false, error: 'Invalid payment signature.' }, { status: 400 });
-    }
-    
-    // If signature is valid, update the order in Firestore
-    const orderRef = doc(db, 'orders', orderId);
-    const orderDoc = await getDoc(orderRef);
-    
-    if (!orderDoc.exists() || orderDoc.data().status !== 'pending_payment') {
-         return NextResponse.json({ success: false, error: 'Order not found or already processed.' }, { status: 404 });
-    }
-
-    await updateDoc(orderRef, {
-        status: 'active',
-        paymentId: razorpay_payment_id,
-    });
-    
-    const order = orderDoc.data() as Order;
-    // Create notification for the freelancer
-    await createNotification({
-        userId: order.freelancerId,
-        type: 'new_order',
-        content: `You have a new order from ${order.clientName} for "${order.title}".`,
-        link: `/dashboard/my-orders`,
-    });
-
-    return NextResponse.json({ success: true, message: 'Payment verified successfully.' });
-
-  } catch (error) {
-    console.error('Payment verification failed:', error);
-    if (error instanceof z.ZodError) {
-        return NextResponse.json({ success: false, error: 'Invalid input data.' }, { status: 400 });
-    }
-    return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
-  }
 }

@@ -676,10 +676,14 @@ export async function getFreelancerDashboardData(userId: string) {
         getDocs(ordersQuery),
         getDocs(recentOrdersQuery)
     ]);
+    
+    const allOrders = ordersSnapshot.docs.map(doc => doc.data() as Order);
 
     const totalServices = servicesSnapshot.data().count;
-    const activeOrders = ordersSnapshot.docs.filter(doc => doc.data().status === 'active').length;
-    const totalEarnings = ordersSnapshot.docs.reduce((sum, doc) => sum + doc.data().price, 0);
+    const activeOrders = allOrders.filter(order => order.status === 'active' || order.status === 'delivered').length;
+    const totalEarnings = allOrders
+        .filter(order => order.status === 'completed')
+        .reduce((sum, order) => sum + (order.freelancerEarning || 0), 0);
 
     const recentOrders = recentOrdersSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Order));
 
@@ -698,7 +702,7 @@ export async function getClientDashboardData(userId: string) {
     ]);
 
     const totalJobs = jobsSnapshot.data().count;
-    const activeOrders = ordersSnapshot.docs.filter(doc => doc.data().status === 'active').length;
+    const activeOrders = ordersSnapshot.docs.filter(doc => doc.status === 'active' || doc.status === 'delivered').length;
 
     const recentOrders = recentOrdersSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Order));
 
