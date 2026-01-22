@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Star, Clock } from "lucide-react";
 import Image from "next/image";
-import { getServiceById, getUser, createOrder, hasCompletedOrder } from "@/lib/firebase/firestore";
+import { getServiceById, getUser, createPendingOrderForService, hasCompletedOrder } from "@/lib/firebase/firestore";
 import type { Service, User } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
@@ -69,9 +69,17 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
 
       setIsOrdering(true);
       try {
-          await createOrder(service, profile);
-          toast({ title: "Order Placed!", description: "Your order has been sent to the freelancer." });
-          router.push('/dashboard/my-orders');
+          const pendingOrder = await createPendingOrderForService(service, profile);
+          
+          toast({
+            title: "Order Created",
+            description: "Proceeding to payment...",
+          });
+
+          // This is where Phase 3 (Razorpay integration) will be triggered.
+          // For now, we'll just log the created pending order.
+          console.log("Created pending order, ready for payment:", pendingOrder);
+
       } catch (error: any) {
           toast({ title: "Order Failed", description: error.message, variant: "destructive" });
       } finally {

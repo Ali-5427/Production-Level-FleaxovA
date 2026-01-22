@@ -110,7 +110,7 @@ export interface Order {
   title: string;
   imageUrl?: string;
   price: number;
-  status: 'pending_payment' | 'active' | 'completed' | 'cancelled' | 'disputed' | 'delivered';
+  status: 'pending_payment' | 'active' | 'completed' | 'cancelled' | 'disputed' | 'delivered' | 'payment_failed';
   clientId: string;
   clientName: string;
   clientAvatarUrl?: string;
@@ -122,6 +122,8 @@ export interface Order {
   source: 'service' | 'job';
   sourceId: string; // will be either serviceId or jobId
   paymentId?: string;
+  commission?: number;
+  freelancerEarning?: number;
 }
 
 

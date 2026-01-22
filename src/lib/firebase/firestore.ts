@@ -374,7 +374,7 @@ export async function getUser(userId: string): Promise<User | null> {
 }
 
 // --- ORDERS ---
-export async function createOrder(service: Service, client: User) {
+export async function createPendingOrderForService(service: Service, client: User): Promise<Order> {
     if (service.freelancerId === client.id) {
         throw new Error("You cannot order your own service.");
     }
@@ -383,11 +383,14 @@ export async function createOrder(service: Service, client: User) {
         throw new Error("Seller not found.");
     }
 
-    const orderData: Omit<Order, 'id' | 'createdAt'> = {
+    const commission = service.price * 0.10;
+    const freelancerEarning = service.price * 0.90;
+
+    const orderData = {
         title: service.title,
         imageUrl: service.imageUrl || '',
         price: service.price,
-        status: 'active',
+        status: 'pending_payment' as const,
         clientId: client.id,
         clientName: client.fullName,
         clientAvatarUrl: client.avatarUrl || '',
@@ -395,8 +398,10 @@ export async function createOrder(service: Service, client: User) {
         freelancerName: seller.fullName,
         freelancerAvatarUrl: seller.avatarUrl || '',
         participantIds: [client.id, service.freelancerId],
-        source: 'service',
+        source: 'service' as const,
         sourceId: service.id,
+        commission,
+        freelancerEarning,
     };
 
     const ordersCollection = collection(db, 'orders');
@@ -405,15 +410,13 @@ export async function createOrder(service: Service, client: User) {
         createdAt: serverTimestamp()
     });
 
-    await createNotification({
-        userId: service.freelancerId,
-        type: 'new_order',
-        content: `${client.fullName} ordered your service: "${service.title}"`,
-        link: `/dashboard/my-orders`
-    });
-
-    return newOrderRef;
+    return {
+        ...orderData,
+        id: newOrderRef.id,
+        createdAt: new Date().toISOString(),
+    };
 }
+
 
 export async function getOrdersForUser(userId: string): Promise<Order[]> {
     const ordersCollection = collection(db, 'orders');
