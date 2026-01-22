@@ -8,6 +8,19 @@ export interface PortfolioItem {
   imageUrl?: string;
 }
 
+export interface PaymentDetails {
+  accountHolderName: string;
+  preferredMethod: 'bank' | 'upi';
+  upiId?: string;
+  bankName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  isVerified: boolean;
+  addedAt: any; // Firestore Timestamp
+  updatedAt: any; // Firestore Timestamp
+  rejectionReason?: string;
+}
+
 // Base user from Firebase Authentication
 export interface AuthUser {
   uid: string;
@@ -37,6 +50,7 @@ export interface User {
   };
   rating: number; 
   reviewsCount: number;
+  paymentDetails?: PaymentDetails;
 }
 
 

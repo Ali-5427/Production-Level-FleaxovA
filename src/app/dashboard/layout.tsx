@@ -25,6 +25,7 @@ import {
   Search,
   Loader2,
   Package,
+  Landmark,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -104,6 +105,12 @@ export default function DashboardLayout({
       label: 'Wallet',
       icon: <Wallet />,
       roles: ['client', 'freelancer'],
+    },
+    {
+      href: '/dashboard/payment-settings',
+      label: 'Payment Settings',
+      icon: <Landmark />,
+      roles: ['freelancer'],
     },
   ];
 
