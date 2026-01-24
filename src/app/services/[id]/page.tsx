@@ -144,7 +144,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
               },
               modal: {
                   ondismiss: function() {
-                      toast({ title: 'Payment Cancelled', description: 'Your order is still pending. You can try to pay again from your dashboard.', variant: 'destructive'});
+                      toast({ title: 'Payment Cancelled', description: 'Your order is still pending. You can try to pay again from your dashboard.', variant: 'default'});
                       setIsOrdering(false);
                   }
               },
