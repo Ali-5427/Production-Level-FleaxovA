@@ -294,9 +294,13 @@ export async function acceptApplication(job: Job, application: Application) {
         transaction.update(acceptedAppRef, { status: 'accepted' });
 
         // 3. Create a new Order from the Job
+        const commission = job.budget * 0.10;
+        const freelancerEarning = job.budget * 0.90;
         const orderData: Omit<Order, 'id'> = {
             title: job.title,
             price: job.budget,
+            commission,
+            freelancerEarning,
             status: 'active',
             clientId: job.clientId,
             clientName: job.clientName,
@@ -465,15 +469,14 @@ export async function updateOrderStatus(orderId: string, status: Order['status']
                 userId: order.clientId,
                 type: 'order_delivered',
                 content: `Your order "${order.title}" has been delivered.`,
-                link: `/dashboard/my-orders`
+                link: `/dashboard/my-orders/${orderId}`
             });
         } else if (status === 'completed') {
-            // TODO: In future, add logic here to transfer funds to seller's wallet
             await createNotification({
                 userId: order.freelancerId,
                 type: 'order_completed',
                 content: `Your order "${order.title}" was marked as complete.`,
-                link: `/dashboard/my-orders`
+                link: `/dashboard/my-orders/${orderId}`
             });
         }
     }
@@ -791,4 +794,5 @@ export { db };
     
 
     
+
 
