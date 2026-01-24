@@ -417,6 +417,21 @@ export async function createPendingOrderForService(service: Service, client: Use
     };
 }
 
+export async function getOrderById(orderId: string): Promise<Order | null> {
+    const docRef = doc(db, 'orders', orderId);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+        const data = docSnap.data();
+        return {
+            id: docSnap.id,
+            ...data,
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+        } as Order;
+    } else {
+        return null;
+    }
+}
 
 export async function getOrdersForUser(userId: string): Promise<Order[]> {
     const ordersCollection = collection(db, 'orders');
@@ -685,7 +700,7 @@ export async function getFreelancerDashboardData(userId: string) {
         .filter(order => order.status === 'completed')
         .reduce((sum, order) => sum + (order.freelancerEarning || 0), 0);
 
-    const recentOrders = recentOrdersSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Order));
+    const recentOrders = recentOrdersSnapshot.docs.map(doc => ({id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate() } as Order));
 
     return { totalServices, activeOrders, totalEarnings, recentOrders };
 }
@@ -702,9 +717,9 @@ export async function getClientDashboardData(userId: string) {
     ]);
 
     const totalJobs = jobsSnapshot.data().count;
-    const activeOrders = ordersSnapshot.docs.filter(doc => doc.status === 'active' || doc.status === 'delivered').length;
+    const activeOrders = ordersSnapshot.docs.filter(doc => doc.data().status === 'active' || doc.data().status === 'delivered').length;
 
-    const recentOrders = recentOrdersSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as Order));
+    const recentOrders = recentOrdersSnapshot.docs.map(doc => ({id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate()} as Order));
 
     return { totalJobs, activeOrders, recentOrders };
 }
@@ -776,3 +791,4 @@ export { db };
     
 
     
+

@@ -102,6 +102,11 @@ export default function MyOrdersPage() {
                                    <Check className="mr-2 h-4 w-4"/>Approve & Complete
                                </Button>
                            )}
+                           <Button asChild variant="outline">
+                                <Link href={`/dashboard/my-orders/${order.id}`}>
+                                    View Details
+                                </Link>
+                           </Button>
                         </CardFooter>
                     </Card>
                 ))}

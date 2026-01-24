@@ -98,7 +98,9 @@ export default function FreelancerDashboard() {
                                 <TableCell>
                                     <div className="font-medium">{order.clientName}</div>
                                     <div className="hidden text-sm text-muted-foreground md:inline">
+                                      <Link href={`/dashboard/my-orders/${order.id}`} className="hover:underline">
                                         {order.title}
+                                      </Link>
                                     </div>
                                 </TableCell>
                                 <TableCell className="hidden sm:table-cell">
