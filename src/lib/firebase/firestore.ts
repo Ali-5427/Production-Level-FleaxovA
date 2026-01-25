@@ -800,19 +800,64 @@ export async function getAdminDashboardStats() {
     const usersCol = collection(db, 'users');
     const servicesCol = collection(db, 'services');
     const jobsCol = collection(db, 'jobs');
+    const withdrawalsCol = collection(db, 'withdrawals');
+    const ordersCol = collection(db, 'orders');
 
-    const [usersSnapshot, servicesSnapshot, jobsSnapshot] = await Promise.all([
+    const [usersSnapshot, servicesSnapshot, jobsSnapshot, pendingWithdrawalsSnapshot, completedOrdersSnapshot] = await Promise.all([
         getCountFromServer(usersCol),
         getCountFromServer(servicesCol),
-        getCountFromServer(jobsCol),
+        getCountFromServer(query(jobsCol, where('status', '==', 'open'))),
+        getCountFromServer(query(withdrawalsCol, where('status', '==', 'pending'))),
+        getDocs(query(ordersCol, where('status', '==', 'completed'))),
     ]);
+
+    const totalRevenue = completedOrdersSnapshot.docs.reduce((sum, doc) => sum + (doc.data().commission || 0), 0);
 
     return {
         totalUsers: usersSnapshot.data().count,
         totalServices: servicesSnapshot.data().count,
         totalJobs: jobsSnapshot.data().count,
-        totalRevenue: 12350, 
-        pendingWithdrawals: 0,
+        totalRevenue: totalRevenue, 
+        pendingWithdrawals: pendingWithdrawalsSnapshot.data().count,
+    };
+}
+
+export async function getAdminRevenueData() {
+    const ordersCol = collection(db, 'orders');
+    const completedOrdersQuery = query(ordersCol, where('status', '==', 'completed'), orderBy('createdAt', 'desc'));
+
+    const snapshot = await getDocs(completedOrdersQuery);
+    const completedOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate() } as Order));
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    let totalCommission = 0;
+    let todayCommission = 0;
+    let monthCommission = 0;
+
+    for (const order of completedOrders) {
+        const commission = order.commission || 0;
+        totalCommission += commission;
+
+        const orderDate = (order.createdAt as any)?.toDate ? (order.createdAt as any).toDate() : new Date(order.createdAt);
+        
+        if (orderDate >= startOfToday) {
+            todayCommission += commission;
+        }
+        if (orderDate >= startOfMonth) {
+            monthCommission += commission;
+        }
+    }
+
+    const recentTransactions = completedOrders.slice(0, 10);
+
+    return {
+        totalCommission,
+        todayCommission,
+        monthCommission,
+        recentTransactions,
     };
 }
 
@@ -860,6 +905,7 @@ export { db };
     
 
     
+
 
 
 

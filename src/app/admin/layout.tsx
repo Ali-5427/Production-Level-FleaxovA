@@ -25,6 +25,8 @@ import {
   Building,
   Bell,
   Search,
+  DollarSign,
+  Landmark,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -75,6 +77,8 @@ export default function AdminLayout({
     { href: "/admin", label: "Dashboard", icon: <LayoutGrid /> },
     { href: "/admin/users", label: "User Management", icon: <Users /> },
     { href: "/admin/services", label: "Service Moderation", icon: <Briefcase /> },
+    { href: "/admin/revenue", label: "Revenue", icon: <DollarSign /> },
+    { href: "/admin/withdrawals", label: "Withdrawals", icon: <Landmark /> },
   ];
 
   return (
