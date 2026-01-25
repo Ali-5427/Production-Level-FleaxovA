@@ -703,6 +703,32 @@ export async function getWithdrawalsForUser(userId: string): Promise<Withdrawal[
     });
 }
 
+export function getWithdrawalsListener(callback: (withdrawals: Withdrawal[]) => void) {
+    const q = query(collection(db, 'withdrawals'), orderBy('createdAt', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+        const withdrawalsPromises = snapshot.docs.map(async (doc) => {
+            const data = doc.data();
+            const user = await getUser(data.userId); // Fetch user data for each withdrawal
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: data.createdAt?.toDate(),
+                processedAt: data.processedAt?.toDate(),
+                freelancerName: user?.fullName, // Add freelancer name
+                freelancerEmail: user?.email, // Add freelancer email
+            } as Withdrawal & { freelancerName?: string; freelancerEmail?: string };
+        });
+        const withdrawals = await Promise.all(withdrawalsPromises);
+        callback(withdrawals);
+    }, (error) => {
+        console.error("Withdrawals listener error: ", error);
+    });
+
+    return unsubscribe;
+}
+
+
 export async function createWithdrawalRequest(userId: string, amount: number, paymentDetails: PaymentDetails) {
     if (!paymentDetails.isVerified) {
         throw new Error("Payment details are not verified.");
@@ -744,6 +770,72 @@ export async function createWithdrawalRequest(userId: string, amount: number, pa
         userId: userId,
         type: 'withdrawal_request',
         content: `Your withdrawal request for ₹${amount.toFixed(2)} has been submitted and is pending approval.`,
+        link: '/dashboard/wallet'
+    });
+}
+
+export async function approveWithdrawal(withdrawalId: string, adminNote?: string) {
+    const withdrawalRef = doc(db, 'withdrawals', withdrawalId);
+    const withdrawalSnap = await getDoc(withdrawalRef);
+    if (!withdrawalSnap.exists() || withdrawalSnap.data().status !== 'pending') {
+        throw new Error("Withdrawal not found or already processed.");
+    }
+    const withdrawal = withdrawalSnap.data() as Withdrawal;
+
+    await updateDoc(withdrawalRef, {
+        status: 'approved',
+        processedAt: serverTimestamp(),
+        adminNote: adminNote || '',
+    });
+
+    await createNotification({
+        userId: withdrawal.userId,
+        type: 'withdrawal_approved',
+        content: `Your withdrawal request for ₹${withdrawal.amount.toFixed(2)} has been approved and processed.`,
+        link: '/dashboard/wallet'
+    });
+}
+
+export async function rejectWithdrawal(withdrawalId: string, reason: string) {
+    if (!reason) {
+        throw new Error("A reason is required to reject a withdrawal.");
+    }
+
+    const withdrawalRef = doc(db, 'withdrawals', withdrawalId);
+    
+    await runTransaction(db, async (transaction) => {
+        const withdrawalSnap = await transaction.get(withdrawalRef);
+        if (!withdrawalSnap.exists() || withdrawalSnap.data().status !== 'pending') {
+            throw new Error("Withdrawal not found or already processed.");
+        }
+        const withdrawal = withdrawalSnap.data() as Withdrawal;
+        const userRef = doc(db, 'users', withdrawal.userId);
+        const userSnap = await transaction.get(userRef);
+        if (!userSnap.exists()) {
+            throw new Error("User associated with withdrawal not found.");
+        }
+
+        // Return money to wallet
+        const newBalance = (userSnap.data().walletBalance || 0) + withdrawal.amount;
+        transaction.update(userRef, { walletBalance: newBalance });
+
+        // Update withdrawal doc
+        transaction.update(withdrawalRef, {
+            status: 'rejected',
+            processedAt: serverTimestamp(),
+            adminNote: reason,
+        });
+    });
+
+    // Send notification outside transaction
+    const withdrawalSnap = await getDoc(withdrawalRef);
+    if (!withdrawalSnap.exists()) return;
+    const withdrawal = withdrawalSnap.data() as Withdrawal;
+
+    await createNotification({
+        userId: withdrawal.userId,
+        type: 'withdrawal_rejected',
+        content: `Your withdrawal for ₹${withdrawal.amount.toFixed(2)} was rejected. Reason: ${reason}`,
         link: '/dashboard/wallet'
     });
 }
@@ -841,7 +933,7 @@ export async function getAdminRevenueData() {
         const commission = order.commission || 0;
         totalCommission += commission;
 
-        const orderDate = (order.createdAt as any)?.toDate ? (order.createdAt as any).toDate() : new Date(order.createdAt);
+        const orderDate = new Date(order.createdAt);
         
         if (orderDate >= startOfToday) {
             todayCommission += commission;
@@ -905,6 +997,7 @@ export { db };
     
 
     
+
 
 
 

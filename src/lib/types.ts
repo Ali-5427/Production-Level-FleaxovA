@@ -189,4 +189,5 @@ export interface Withdrawal {
     paymentDetails: PaymentDetails;
     createdAt: any;
     processedAt?: any;
+    adminNote?: string;
 }

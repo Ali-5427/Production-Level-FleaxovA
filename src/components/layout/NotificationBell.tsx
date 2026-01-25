@@ -15,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Bell, Mail, Package, Briefcase, FileText, CheckCircle, ArrowDownCircle } from 'lucide-react';
+import { Bell, Mail, Package, Briefcase, FileText, CheckCircle, ArrowDownCircle, ShieldX, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '../ui/scroll-area';
@@ -25,10 +25,12 @@ const NOTIFICATION_ICONS: { [key: string]: React.ReactNode } = {
   new_order: <Package className="h-4 w-4 text-green-500" />,
   new_application: <FileText className="h-4 w-4 text-purple-500" />,
   application_accepted: <CheckCircle className="h-4 w-4 text-green-500" />,
-  application_rejected: <FileText className="h-4 w-4 text-red-500" />,
+  application_rejected: <XCircle className="h-4 w-4 text-red-500" />,
   order_delivered: <Briefcase className="h-4 w-4 text-blue-500" />,
   order_completed: <CheckCircle className="h-4 w-4 text-green-500" />,
   withdrawal_request: <ArrowDownCircle className="h-4 w-4 text-indigo-500" />,
+  withdrawal_approved: <CheckCircle className="h-4 w-4 text-green-500" />,
+  withdrawal_rejected: <ShieldX className="h-4 w-4 text-red-500" />,
   default: <Bell className="h-4 w-4 text-gray-500" />,
 };
 
@@ -87,7 +89,7 @@ export function NotificationBell() {
                 <div className="flex-1">
                     <p className="text-sm leading-snug">{notif.content}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
+                        {notif.createdAt ? formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true }) : ''}
                     </p>
                 </div>
             </DropdownMenuItem>
