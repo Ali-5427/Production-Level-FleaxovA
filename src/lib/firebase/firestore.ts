@@ -869,6 +869,71 @@ export async function getAdminDashboardStats() {
     };
 }
 
+export async function getFreelancerDashboardData(freelancerId: string) {
+    const servicesCol = collection(db, 'services');
+    const ordersCol = collection(db, 'orders');
+
+    const servicesQuery = query(servicesCol, where('freelancerId', '==', freelancerId));
+    const activeOrdersQuery = query(ordersCol, where('freelancerId', '==', freelancerId), where('status', 'in', ['active', 'delivered']));
+    const recentOrdersQuery = query(ordersCol, where('freelancerId', '==', freelancerId), orderBy('createdAt', 'desc'), limit(5));
+    const completedOrdersQuery = query(ordersCol, where('freelancerId', '==', freelancerId), where('status', '==', 'completed'));
+
+    const [servicesSnapshot, activeOrdersSnapshot, recentOrdersSnapshot, completedOrdersSnapshot] = await Promise.all([
+        getCountFromServer(servicesQuery),
+        getCountFromServer(activeOrdersQuery),
+        getDocs(recentOrdersQuery),
+        getDocs(completedOrdersQuery),
+    ]);
+
+    const totalEarnings = completedOrdersSnapshot.docs.reduce((sum, doc) => sum + (doc.data().freelancerEarning || 0), 0);
+    
+    const recentOrders = recentOrdersSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate(),
+      } as Order
+    });
+
+    return {
+        totalServices: servicesSnapshot.data().count,
+        activeOrders: activeOrdersSnapshot.data().count,
+        totalEarnings,
+        recentOrders,
+    };
+}
+
+export async function getClientDashboardData(clientId: string) {
+    const jobsCol = collection(db, 'jobs');
+    const ordersCol = collection(db, 'orders');
+
+    const jobsQuery = query(jobsCol, where('clientId', '==', clientId));
+    const activeOrdersQuery = query(ordersCol, where('clientId', '==', clientId), where('status', 'in', ['active', 'delivered']));
+    const recentOrdersQuery = query(ordersCol, where('clientId', '==', clientId), orderBy('createdAt', 'desc'), limit(5));
+
+    const [jobsSnapshot, activeOrdersSnapshot, recentOrdersSnapshot] = await Promise.all([
+        getCountFromServer(jobsQuery),
+        getCountFromServer(activeOrdersQuery),
+        getDocs(recentOrdersQuery),
+    ]);
+
+    const recentOrders = recentOrdersSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate(),
+      } as Order
+    });
+
+    return {
+        totalJobs: jobsSnapshot.data().count,
+        activeOrders: activeOrdersSnapshot.data().count,
+        recentOrders,
+    };
+}
+
 export async function getAdminRevenueData() {
     const ordersCol = collection(db, 'orders');
     const completedOrdersQuery = query(ordersCol, where('status', '==', 'completed'), orderBy('createdAt', 'desc'));
@@ -1013,6 +1078,7 @@ export { db };
     
 
     
+
 
 
 
