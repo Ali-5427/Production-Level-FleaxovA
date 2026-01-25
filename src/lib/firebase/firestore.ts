@@ -773,11 +773,29 @@ export async function createWithdrawalRequest(userId: string, amount: number, pa
         link: '/dashboard/wallet'
     });
 
-    // 4. Create admin alert
-    // TODO: Replace this log with a real email alert system in production.
-    console.log(
-        `ADMIN_ALERT: New withdrawal request from user ${userId} for amount ₹${amount.toFixed(2)}. Please review in the admin dashboard.`
-    );
+    // 4. Create notifications for all admins
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where("role", "==", "admin"));
+    const adminSnapshot = await getDocs(q);
+
+    const freelancerProfile = await getUser(userId);
+
+    if (!adminSnapshot.empty) {
+        const notificationPromises: Promise<any>[] = [];
+        adminSnapshot.forEach(adminDoc => {
+            notificationPromises.push(createNotification({
+                userId: adminDoc.id,
+                type: 'withdrawal_request',
+                content: `New withdrawal request from ${freelancerProfile?.fullName || 'a freelancer'} for ₹${amount.toFixed(2)}.`,
+                link: '/admin/withdrawals'
+            }));
+        });
+        await Promise.all(notificationPromises);
+    } else {
+         console.log(
+            `ADMIN_ALERT: New withdrawal request from user ${userId} for amount ₹${amount.toFixed(2)}. No admin accounts found to notify.`
+        );
+    }
 }
 
 export async function approveWithdrawal(withdrawalId: string, adminNote?: string) {
@@ -1084,6 +1102,7 @@ export { db };
     
 
     
+
 
 
 

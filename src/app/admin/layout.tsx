@@ -23,7 +23,6 @@ import {
   Briefcase,
   LogOut,
   Building,
-  Bell,
   Search,
   DollarSign,
   Landmark,
@@ -41,6 +40,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { NotificationBell } from '@/components/layout/NotificationBell';
 
 
 export default function AdminLayout({
@@ -133,10 +133,7 @@ export default function AdminLayout({
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
-              <span className="sr-only">Notifications</span>
-            </Button>
+            <NotificationBell />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
