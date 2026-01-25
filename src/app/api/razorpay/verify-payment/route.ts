@@ -14,8 +14,9 @@ const verificationSchema = z.object({
 });
 
 export async function POST(request: Request) {
+    let body;
     try {
-        const body = await request.json();
+        body = await request.json();
         const {
             razorpay_order_id,
             razorpay_payment_id,
@@ -95,7 +96,21 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, message: 'Payment verified and order activated successfully.' });
 
     } catch (error: any) {
-        console.error('Payment verification failed:', error);
+        // Structured error logging - remove sensitive signature
+        const { razorpay_signature, ...loggableBody } = body || {};
+        console.error(JSON.stringify({
+            source: 'razorpay-verify-payment',
+            level: 'error',
+            message: 'Payment verification failed',
+            error: {
+                name: error.name,
+                message: error.message,
+            },
+            context: {
+                requestBody: loggableBody
+            }
+        }, null, 2));
+        
         if (error instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: 'Invalid input data.' }, { status: 400 });
         }

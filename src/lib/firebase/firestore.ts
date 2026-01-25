@@ -772,6 +772,12 @@ export async function createWithdrawalRequest(userId: string, amount: number, pa
         content: `Your withdrawal request for ₹${amount.toFixed(2)} has been submitted and is pending approval.`,
         link: '/dashboard/wallet'
     });
+
+    // 4. Create admin alert
+    // TODO: Replace this log with a real email alert system in production.
+    console.log(
+        `ADMIN_ALERT: New withdrawal request from user ${userId} for amount ₹${amount.toFixed(2)}. Please review in the admin dashboard.`
+    );
 }
 
 export async function approveWithdrawal(withdrawalId: string, adminNote?: string) {
@@ -1078,6 +1084,7 @@ export { db };
     
 
     
+
 
 
 
