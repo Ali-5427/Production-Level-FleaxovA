@@ -318,22 +318,37 @@ export async function acceptApplication(job: Job, application: Application) {
     });
 
     // --- Create Notifications ---
+    const HIGH_VALUE_THRESHOLD = 10000;
+    const notificationPromises = [];
 
     // For accepted freelancer
-    await createNotification({
+    notificationPromises.push(createNotification({
         userId: application.freelancerId,
         type: 'application_accepted',
         content: `Congratulations! You were hired for the job: "${job.title}"`,
-        link: `/dashboard/my-orders`
-    });
+        link: `/dashboard/my-orders/${orderRef.id}`
+    }));
 
     // For client (confirmation)
-     await createNotification({
+     notificationPromises.push(createNotification({
         userId: job.clientId,
         type: 'application_accepted',
         content: `You have hired ${application.freelancerName} for the job: "${job.title}"`,
-        link: `/dashboard/my-orders`
-    });
+        link: `/dashboard/my-orders/${orderRef.id}`
+    }));
+
+    // For High-Value Order to Admins
+    if (job.budget >= HIGH_VALUE_THRESHOLD) {
+        const adminIds = await getAdminIds();
+        for (const adminId of adminIds) {
+            notificationPromises.push(createNotification({
+                userId: adminId,
+                type: 'order_completed',
+                content: `High-value job awarded: "${job.title}" for ₹${job.budget.toFixed(2)}.`,
+                link: `/dashboard/my-orders/${orderRef.id}`
+            }));
+        }
+    }
 
     // For other rejected freelancers
     const applicationsCollection = collection(db, 'applications');
@@ -346,8 +361,6 @@ export async function acceptApplication(job: Job, application: Application) {
     const otherAppsSnapshot = await getDocs(otherAppsQuery);
     if (!otherAppsSnapshot.empty) {
         const batch = writeBatch(db);
-        const notificationPromises: Promise<any>[] = [];
-
         otherAppsSnapshot.forEach(doc => {
             batch.update(doc.ref, { status: 'rejected' });
             notificationPromises.push(createNotification({
@@ -357,8 +370,10 @@ export async function acceptApplication(job: Job, application: Application) {
                 link: `/dashboard/my-applications`
             }));
         });
-        await Promise.all([batch.commit(), ...notificationPromises]);
+        notificationPromises.push(batch.commit());
     }
+    
+    await Promise.all(notificationPromises);
 }
 
 
@@ -867,6 +882,15 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
 
 // --- ADMIN FUNCTIONS ---
 
+export async function getAdminIds(): Promise<string[]> {
+    const adminsQuery = query(collection(db, 'users'), where('role', '==', 'admin'));
+    const snapshot = await getDocs(adminsQuery);
+    if (snapshot.empty) {
+        return [];
+    }
+    return snapshot.docs.map(doc => doc.id);
+}
+
 export async function getAdminDashboardStats() {
     const usersCol = collection(db, 'users');
     const servicesCol = collection(db, 'services');
@@ -1102,6 +1126,7 @@ export { db };
     
 
     
+
 
 
 

@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
-import { db, createNotification } from '@/lib/firebase/firestore';
+import { db, createNotification, getAdminIds } from '@/lib/firebase/firestore';
 import type { Order, User } from '@/lib/types';
 import { z } from 'zod';
 
@@ -76,27 +76,43 @@ export async function POST(request: Request) {
         });
 
         // 3. Create notifications (outside of the transaction for efficiency)
-        await Promise.all([
-            // For freelancer
-            createNotification({
-                userId: order.freelancerId,
-                type: 'new_order',
-                content: `You have a new order from ${order.clientName} for "${order.title}". Your wallet has been credited ₹${order.freelancerEarning?.toFixed(2)}.`,
-                link: `/dashboard/my-orders`,
-            }),
-            // For client
-            createNotification({
-                userId: order.clientId,
-                type: 'order_completed', // Using 'order_completed' for its checkmark icon
-                content: `Your payment for "${order.title}" was successful. The order is now active.`,
-                link: `/dashboard/my-orders`,
-            })
-        ]);
+        const HIGH_VALUE_THRESHOLD = 10000;
+        const notificationPromises = [];
+
+        // For freelancer
+        notificationPromises.push(createNotification({
+            userId: order.freelancerId,
+            type: 'new_order',
+            content: `You have a new order from ${order.clientName} for "${order.title}". Your wallet has been credited ₹${order.freelancerEarning?.toFixed(2)}.`,
+            link: `/dashboard/my-orders/${orderId}`,
+        }));
+        // For client
+        notificationPromises.push(createNotification({
+            userId: order.clientId,
+            type: 'order_completed',
+            content: `Your payment for "${order.title}" was successful. The order is now active.`,
+            link: `/dashboard/my-orders/${orderId}`,
+        }));
+        
+        // For Admins if high-value
+        if (order.price >= HIGH_VALUE_THRESHOLD) {
+            const adminIds = await getAdminIds();
+            for (const adminId of adminIds) {
+                notificationPromises.push(createNotification({
+                    userId: adminId,
+                    type: 'order_completed', // checkmark icon
+                    content: `High-value service purchased: "${order.title}" for ₹${order.price.toFixed(2)}.`,
+                    link: `/dashboard/my-orders/${orderId}`
+                }));
+            }
+        }
+
+        await Promise.all(notificationPromises);
 
         return NextResponse.json({ success: true, message: 'Payment verified and order activated successfully.' });
 
     } catch (error: any) {
-        // Structured error logging - remove sensitive signature
+        // Structured error logging
         const { razorpay_signature, ...loggableBody } = body || {};
         console.error(JSON.stringify({
             source: 'razorpay-verify-payment',
@@ -110,6 +126,22 @@ export async function POST(request: Request) {
                 requestBody: loggableBody
             }
         }, null, 2));
+
+        // Admin notification for critical error
+        try {
+            const adminIds = await getAdminIds();
+            const notificationPromises = adminIds.map(adminId => 
+                createNotification({
+                    userId: adminId,
+                    type: 'withdrawal_rejected', // Using this for a red error icon
+                    content: `Critical Payment Error: Verification failed for Razorpay order ${body?.razorpay_order_id}.`,
+                    link: `/admin/revenue`
+                })
+            );
+            await Promise.all(notificationPromises);
+        } catch (notificationError) {
+            console.error("Failed to send admin notification for payment error:", notificationError);
+        }
         
         if (error instanceof z.ZodError) {
             return NextResponse.json({ success: false, error: 'Invalid input data.' }, { status: 400 });
