@@ -27,6 +27,7 @@ import {
   Search,
   DollarSign,
   Landmark,
+  ShieldCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -79,6 +80,7 @@ export default function AdminLayout({
     { href: "/admin/services", label: "Service Moderation", icon: <Briefcase /> },
     { href: "/admin/revenue", label: "Revenue", icon: <DollarSign /> },
     { href: "/admin/withdrawals", label: "Withdrawals", icon: <Landmark /> },
+    { href: "/admin/payment-verifications", label: "Payment Verifications", icon: <ShieldCheck /> },
   ];
 
   return (

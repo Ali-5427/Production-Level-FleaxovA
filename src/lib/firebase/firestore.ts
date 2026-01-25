@@ -841,51 +841,6 @@ export async function rejectWithdrawal(withdrawalId: string, reason: string) {
 }
 
 
-// --- DASHBOARD FUNCTIONS ---
-export async function getFreelancerDashboardData(userId: string) {
-    const servicesQuery = query(collection(db, 'services'), where('freelancerId', '==', userId));
-    const ordersQuery = query(collection(db, 'orders'), where('freelancerId', '==', userId));
-    const recentOrdersQuery = query(collection(db, 'orders'), where('freelancerId', '==', userId), orderBy('createdAt', 'desc'), limit(5));
-
-    const [servicesSnapshot, ordersSnapshot, recentOrdersSnapshot] = await Promise.all([
-        getCountFromServer(servicesQuery),
-        getDocs(ordersQuery),
-        getDocs(recentOrdersQuery)
-    ]);
-    
-    const allOrders = ordersSnapshot.docs.map(doc => doc.data() as Order);
-
-    const totalServices = servicesSnapshot.data().count;
-    const activeOrders = allOrders.filter(order => order.status === 'active' || order.status === 'delivered').length;
-    const totalEarnings = allOrders
-        .filter(order => order.status === 'completed')
-        .reduce((sum, order) => sum + (order.freelancerEarning || 0), 0);
-
-    const recentOrders = recentOrdersSnapshot.docs.map(doc => ({id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate() } as Order));
-
-    return { totalServices, activeOrders, totalEarnings, recentOrders };
-}
-
-export async function getClientDashboardData(userId: string) {
-    const jobsQuery = query(collection(db, 'jobs'), where('clientId', '==', userId));
-    const ordersQuery = query(collection(db, 'orders'), where('clientId', '==', userId));
-    const recentOrdersQuery = query(collection(db, 'orders'), where('clientId', '==', userId), orderBy('createdAt', 'desc'), limit(5));
-
-    const [jobsSnapshot, ordersSnapshot, recentOrdersSnapshot] = await Promise.all([
-        getCountFromServer(jobsQuery),
-        getDocs(ordersQuery),
-        getDocs(recentOrdersQuery)
-    ]);
-
-    const totalJobs = jobsSnapshot.data().count;
-    const activeOrders = ordersSnapshot.docs.filter(doc => doc.data().status === 'active' || doc.data().status === 'delivered').length;
-
-    const recentOrders = recentOrdersSnapshot.docs.map(doc => ({id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate()} as Order));
-
-    return { totalJobs, activeOrders, recentOrders };
-}
-
-
 // --- ADMIN FUNCTIONS ---
 
 export async function getAdminDashboardStats() {
@@ -976,6 +931,11 @@ export function getUsersListener(callback: (users: User[]) => void) {
                 id: doc.id,
                 ...data,
                 createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+                paymentDetails: data.paymentDetails ? {
+                    ...data.paymentDetails,
+                    addedAt: data.paymentDetails.addedAt?.toDate ? data.paymentDetails.addedAt.toDate() : data.paymentDetails.addedAt,
+                    updatedAt: data.paymentDetails.updatedAt?.toDate ? data.paymentDetails.updatedAt.toDate() : data.paymentDetails.updatedAt,
+                } : undefined,
             } as User;
         });
         callback(users);
@@ -991,12 +951,69 @@ export async function updateUserStatus(userId: string, status: 'active' | 'suspe
     await updateDoc(userRef, { status });
 }
 
+export async function verifyPaymentDetails(userId: string) {
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists() || !userSnap.data().paymentDetails) {
+        throw new Error("User or payment details not found.");
+    }
+    
+    const paymentDetails = userSnap.data().paymentDetails;
+    
+    await updateDoc(userRef, {
+        paymentDetails: {
+            ...paymentDetails,
+            isVerified: true,
+            rejectionReason: '', // Clear any previous rejection reason
+            updatedAt: serverTimestamp(),
+        }
+    });
+
+    await createNotification({
+        userId: userId,
+        type: 'withdrawal_approved', // Using this for green check icon
+        content: `Your payment details have been successfully verified! You can now request withdrawals.`,
+        link: '/dashboard/payment-settings'
+    });
+}
+
+export async function rejectPaymentDetails(userId: string, reason: string) {
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists() || !userSnap.data().paymentDetails) {
+        throw new Error("User or payment details not found.");
+    }
+    
+    if (!reason.trim()) {
+        throw new Error("A reason for rejection is required.");
+    }
+    
+    const paymentDetails = userSnap.data().paymentDetails;
+
+    await updateDoc(userRef, {
+        paymentDetails: {
+            ...paymentDetails,
+            isVerified: false,
+            rejectionReason: reason,
+            updatedAt: serverTimestamp(),
+        }
+    });
+
+    await createNotification({
+        userId: userId,
+        type: 'withdrawal_rejected', // Using this for red cross icon
+        content: `Your payment details were rejected. Reason: ${reason}. Please update them.`,
+        link: '/dashboard/payment-settings'
+    });
+}
+
 
 export { db };
     
     
 
     
+
 
 
 
