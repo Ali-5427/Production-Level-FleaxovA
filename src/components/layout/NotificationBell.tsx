@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -14,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Bell, Mail, Package, Briefcase, FileText, CheckCircle } from 'lucide-react';
+import { Bell, Mail, Package, Briefcase, FileText, CheckCircle, ArrowDownCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '../ui/scroll-area';
@@ -27,6 +28,7 @@ const NOTIFICATION_ICONS: { [key: string]: React.ReactNode } = {
   application_rejected: <FileText className="h-4 w-4 text-red-500" />,
   order_delivered: <Briefcase className="h-4 w-4 text-blue-500" />,
   order_completed: <CheckCircle className="h-4 w-4 text-green-500" />,
+  withdrawal_request: <ArrowDownCircle className="h-4 w-4 text-indigo-500" />,
   default: <Bell className="h-4 w-4 text-gray-500" />,
 };
 

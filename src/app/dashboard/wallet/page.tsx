@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import { useState, useEffect } from 'react';
@@ -8,9 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getOrdersForUser } from '@/lib/firebase/firestore';
+import { getOrdersForUser, getWithdrawalsForUser } from '@/lib/firebase/firestore';
 import { format } from 'date-fns';
-import type { Order } from '@/lib/types';
+import type { Order, Withdrawal } from '@/lib/types';
+import { WithdrawalDialog } from '@/components/wallet/WithdrawalDialog';
+import { Badge } from '@/components/ui/badge';
 
 interface Transaction {
     id: string;
@@ -35,7 +38,10 @@ export default function WalletPage() {
         const fetchTransactions = async () => {
             setLoadingTransactions(true);
             try {
-                const orders = await getOrdersForUser(user.uid);
+                const [orders, withdrawals] = await Promise.all([
+                    getOrdersForUser(user.uid),
+                    getWithdrawalsForUser(user.uid)
+                ]);
                 
                 const earnings: Transaction[] = orders
                     .filter((o): o is Order & { freelancerEarning: number } => 
@@ -44,7 +50,7 @@ export default function WalletPage() {
                         typeof o.freelancerEarning === 'number'
                     )
                     .map(o => ({
-                        id: o.id,
+                        id: `earn_${o.id}`,
                         type: 'earning' as const,
                         amount: o.freelancerEarning,
                         date: o.createdAt, 
@@ -52,10 +58,20 @@ export default function WalletPage() {
                         status: 'Completed'
                     }));
                 
-                // In the future, withdrawals would be fetched and merged here.
-                const allTransactions = [...earnings].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                const debits: Transaction[] = withdrawals.map(w => ({
+                    id: `wd_${w.id}`,
+                    type: 'withdrawal' as const,
+                    amount: w.amount,
+                    date: w.createdAt,
+                    description: `Withdrawal to ${w.paymentDetails.preferredMethod === 'bank' ? 'Bank Account' : 'UPI'}`,
+                    status: w.status,
+                }));
+                
+                const allTransactions = [...earnings, ...debits]
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .slice(0, 20);
 
-                setTransactions(allTransactions.slice(0, 20));
+                setTransactions(allTransactions);
             } catch (error) {
                 console.error("Failed to fetch transactions:", error);
             } finally {
@@ -65,6 +81,20 @@ export default function WalletPage() {
 
         fetchTransactions();
     }, [user, profile]);
+
+    const getStatusBadgeVariant = (status: string) => {
+        switch (status.toLowerCase()) {
+            case 'completed':
+            case 'approved':
+                return 'default';
+            case 'pending':
+                return 'secondary';
+            case 'rejected':
+                return 'destructive';
+            default:
+                return 'outline';
+        }
+    }
 
     const TransactionRow = ({ transaction }: { transaction: Transaction }) => (
          <TableRow>
@@ -82,7 +112,9 @@ export default function WalletPage() {
                 {transaction.type === 'withdrawal' ? '-' : '+'}₹{transaction.amount.toFixed(2)}
             </TableCell>
             <TableCell>{format(new Date(transaction.date), 'PPP')}</TableCell>
-            <TableCell>{transaction.status}</TableCell>
+            <TableCell>
+                <Badge variant={getStatusBadgeVariant(transaction.status)} className="capitalize">{transaction.status}</Badge>
+            </TableCell>
         </TableRow>
     );
 
@@ -94,6 +126,8 @@ export default function WalletPage() {
             <TableCell><Skeleton className="h-6 w-20" /></TableCell>
         </TableRow>
     )
+    
+    const canWithdraw = profile?.role === 'freelancer';
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -108,20 +142,22 @@ export default function WalletPage() {
                          {authLoading ? (
                             <Skeleton className="h-10 w-36" />
                         ) : (
-                            <p className="text-4xl font-bold">₹{(profile?.walletBalance || 0).toFixed(2)}</p>
+                            <p className="text-4xl font-bold">₹{(profile?.walletBalance ?? 0).toFixed(2)}</p>
                         )}
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader>
                         <CardTitle>Actions</CardTitle>
-                        <CardDescription>Withdraw your earnings.</CardDescription>
+                        <CardDescription>Withdraw your available earnings.</CardDescription>
                     </CardHeader>
                     <CardContent className="flex gap-4">
-                        <Button className="flex-1" disabled>
-                             <ArrowDownCircle className="mr-2" />
-                            Request Withdrawal
-                        </Button>
+                        <WithdrawalDialog>
+                            <Button className="flex-1" disabled={!canWithdraw || authLoading}>
+                                 <ArrowDownCircle className="mr-2" />
+                                Request Withdrawal
+                            </Button>
+                        </WithdrawalDialog>
                     </CardContent>
                 </Card>
             </div>

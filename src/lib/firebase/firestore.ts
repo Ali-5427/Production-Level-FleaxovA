@@ -1,4 +1,5 @@
 
+
 import { 
   initializeFirestore,
   addDoc,
@@ -20,7 +21,7 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { app } from "./config";
-import type { Service, Job, User, Application, Review, Conversation, Message, Order, Notification } from '../types';
+import type { Service, Job, User, Application, Review, Conversation, Message, Order, Notification, Withdrawal, PaymentDetails } from '../types';
 
 // This global variable is used to cache the Firestore instance in a development environment
 // to prevent issues with Next.js hot-reloading. Using `globalThis` is the standard
@@ -683,6 +684,71 @@ export async function markConversationAsRead(conversationId: string, userId: str
 }
 
 
+// --- WALLET & WITHDRAWALS ---
+
+export async function getWithdrawalsForUser(userId: string): Promise<Withdrawal[]> {
+    const q = query(
+        collection(db, 'withdrawals'),
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+        } as Withdrawal;
+    });
+}
+
+export async function createWithdrawalRequest(userId: string, amount: number, paymentDetails: PaymentDetails) {
+    if (!paymentDetails.isVerified) {
+        throw new Error("Payment details are not verified.");
+    }
+
+    const userRef = doc(db, 'users', userId);
+    const withdrawalRef = doc(collection(db, 'withdrawals'));
+
+    await runTransaction(db, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+            throw new Error("User not found.");
+        }
+        const currentBalance = userDoc.data().walletBalance || 0;
+        if (amount > currentBalance) {
+            throw new Error("Insufficient balance.");
+        }
+        if (amount < 100) {
+            throw new Error("Withdrawal amount must be at least ₹100.");
+        }
+
+        const newBalance = currentBalance - amount;
+
+        // 1. Update user's wallet balance
+        transaction.update(userRef, { walletBalance: newBalance });
+
+        // 2. Create withdrawal record
+        transaction.set(withdrawalRef, {
+            userId,
+            amount,
+            status: 'pending',
+            paymentDetails, // store a snapshot of the details
+            createdAt: serverTimestamp(),
+        });
+    });
+
+    // 3. Create freelancer notification
+    await createNotification({
+        userId: userId,
+        type: 'withdrawal_request',
+        content: `Your withdrawal request for ₹${amount.toFixed(2)} has been submitted and is pending approval.`,
+        link: '/dashboard/wallet'
+    });
+}
+
+
 // --- DASHBOARD FUNCTIONS ---
 export async function getFreelancerDashboardData(userId: string) {
     const servicesQuery = query(collection(db, 'services'), where('freelancerId', '==', userId));
@@ -794,5 +860,6 @@ export { db };
     
 
     
+
 
 

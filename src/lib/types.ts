@@ -1,4 +1,5 @@
 
+
 // Add a new interface for a single portfolio item
 export interface PortfolioItem {
   id: string;
@@ -184,9 +185,8 @@ export interface Withdrawal {
     id: string;
     userId: string;
     amount: number;
-    method: string; // e.g., 'PayPal', 'Bank Transfer'
     status: 'pending' | 'approved' | 'rejected';
-    paymentDetails: object,
-    createdAt: Date;
-    completedAt?: Date;
+    paymentDetails: PaymentDetails;
+    createdAt: any;
+    processedAt?: any;
 }
