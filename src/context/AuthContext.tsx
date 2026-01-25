@@ -4,7 +4,7 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getAuth, onAuthStateChanged, User as FirebaseAuthUser, signOut } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 import { app } from '@/lib/firebase/config';
 import { db } from '@/lib/firebase/firestore';
 import { 
@@ -44,42 +44,57 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const pathname = usePathname();
     const { toast } = useToast();
 
-    // Central listener for auth state changes. This is the single source of truth.
+    // Central listener for auth state changes with real-time profile updates.
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            setLoading(true);
+        let unsubscribeProfile: (() => void) | null = null;
+
+        const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+            // Clean up old profile listener if it exists
+            if (unsubscribeProfile) {
+                unsubscribeProfile();
+                unsubscribeProfile = null;
+            }
+            
             if (firebaseUser) {
-                // User is signed in to Firebase Auth, now get our profile from Firestore
-                try {
-                    const userDocRef = doc(db, 'users', firebaseUser.uid);
-                    const docSnap = await getDoc(userDocRef);
-                    
-                    setUser(firebaseUser);
-                    if (docSnap.exists()) {
-                        setProfile(docSnap.data() as User);
-                    } else {
-                        // This can happen briefly during registration.
+                setLoading(true); // Set loading while we fetch the profile
+                const userDocRef = doc(db, 'users', firebaseUser.uid);
+                
+                unsubscribeProfile = onSnapshot(userDocRef, 
+                    (docSnap) => {
+                        setUser(firebaseUser);
+                        if (docSnap.exists()) {
+                            setProfile(docSnap.data() as User);
+                        } else {
+                            setProfile(null);
+                        }
+                        setLoading(false);
+                    },
+                    (error) => {
+                        console.error("AuthContext profile listener error:", error);
+                        toast({ title: "Profile Error", description: "Could not sync your profile.", variant: "destructive"});
+                        setUser(firebaseUser);
                         setProfile(null);
+                        setLoading(false);
                     }
-                } catch (error) {
-                    console.error("AuthContext: Error fetching user profile", error);
-                    toast({ title: "Error", description: "Could not load user profile.", variant: "destructive" });
-                    setUser(firebaseUser); // Keep auth state
-                    setProfile(null); // But clear profile
-                }
+                );
             } else {
-                // User is signed out
+                // User is signed out, no profile to listen to.
                 setUser(null);
                 setProfile(null);
+                setLoading(false);
             }
-            setLoading(false);
         });
 
-        return () => unsubscribe();
-    }, [toast]); // toast is stable and safe as a dependency.
+        return () => {
+            unsubscribeAuth();
+            if (unsubscribeProfile) {
+                unsubscribeProfile();
+            }
+        };
+    }, [toast]);
+
 
     // This separate effect handles all route protection and redirection logic.
-    // It runs only when the authentication state has been fully determined.
     useEffect(() => {
         if (loading) return;
 
@@ -99,7 +114,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 router.push('/signin');
             }
         }
-    }, [user, profile, loading, pathname, router]); // `toast` is intentionally omitted to prevent re-runs
+    }, [user, profile, loading, pathname, router, toast]);
 
 
     const handleLogin = async (email: string, password: string) => {

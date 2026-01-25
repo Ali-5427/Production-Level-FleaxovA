@@ -1,21 +1,100 @@
 
 "use client"
 
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getOrdersForUser } from '@/lib/firebase/firestore';
+import { format } from 'date-fns';
+import type { Order } from '@/lib/types';
+
+interface Transaction {
+    id: string;
+    type: 'earning' | 'withdrawal';
+    amount: number;
+    date: any;
+    description: string;
+    status: string;
+}
 
 export default function WalletPage() {
-    const { profile, loading } = useAuth();
-    
-    // This is static data. We'll make it dynamic later.
-    const transactions = [
-        { id: '1', type: 'earning', amount: 1500.00, date: '2023-10-22', description: 'Logo Design Project', status: 'Completed' },
-        { id: '2', type: 'withdrawal', amount: 500.00, date: '2023-10-21', status: 'Pending' },
-    ];
+    const { user, profile, loading: authLoading } = useAuth();
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [loadingTransactions, setLoadingTransactions] = useState(true);
+
+    useEffect(() => {
+        if (!user || profile?.role !== 'freelancer') {
+            setLoadingTransactions(false);
+            return;
+        }
+
+        const fetchTransactions = async () => {
+            setLoadingTransactions(true);
+            try {
+                const orders = await getOrdersForUser(user.uid);
+                
+                const earnings: Transaction[] = orders
+                    .filter((o): o is Order & { freelancerEarning: number } => 
+                        o.freelancerId === user.uid && 
+                        o.status === 'completed' &&
+                        typeof o.freelancerEarning === 'number'
+                    )
+                    .map(o => ({
+                        id: o.id,
+                        type: 'earning' as const,
+                        amount: o.freelancerEarning,
+                        date: o.createdAt, 
+                        description: `Earning from "${o.title}"`,
+                        status: 'Completed'
+                    }));
+                
+                // In the future, withdrawals would be fetched and merged here.
+                const allTransactions = [...earnings].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                setTransactions(allTransactions.slice(0, 20));
+            } catch (error) {
+                console.error("Failed to fetch transactions:", error);
+            } finally {
+                setLoadingTransactions(false);
+            }
+        };
+
+        fetchTransactions();
+    }, [user, profile]);
+
+    const TransactionRow = ({ transaction }: { transaction: Transaction }) => (
+         <TableRow>
+            <TableCell>
+                <div className="flex items-center gap-2">
+                    {transaction.type === 'earning' 
+                        ? <ArrowUpCircle className="h-5 w-5 text-green-500" /> 
+                        : <ArrowDownCircle className="h-5 w-5 text-destructive" />
+                    }
+                    <div className="font-medium capitalize">{transaction.type}</div>
+                </div>
+                <div className="text-sm text-muted-foreground pl-7">{transaction.description}</div>
+            </TableCell>
+            <TableCell className={transaction.type === 'withdrawal' ? 'text-destructive' : 'text-green-600'}>
+                {transaction.type === 'withdrawal' ? '-' : '+'}₹{transaction.amount.toFixed(2)}
+            </TableCell>
+            <TableCell>{format(new Date(transaction.date), 'PPP')}</TableCell>
+            <TableCell>{transaction.status}</TableCell>
+        </TableRow>
+    );
+
+    const TransactionSkeleton = () => (
+         <TableRow>
+            <TableCell><Skeleton className="h-6 w-3/4" /></TableCell>
+            <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+            <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+            <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+        </TableRow>
+    )
+
     return (
         <div className="container mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold mb-8">My Wallet</h1>
@@ -26,7 +105,7 @@ export default function WalletPage() {
                         <CardTitle>Current Balance</CardTitle>
                     </CardHeader>
                     <CardContent>
-                         {loading ? (
+                         {authLoading ? (
                             <Skeleton className="h-10 w-36" />
                         ) : (
                             <p className="text-4xl font-bold">₹{(profile?.walletBalance || 0).toFixed(2)}</p>
@@ -36,16 +115,12 @@ export default function WalletPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Actions</CardTitle>
-                        <CardDescription>Deposits & withdrawals are coming soon.</CardDescription>
+                        <CardDescription>Withdraw your earnings.</CardDescription>
                     </CardHeader>
                     <CardContent className="flex gap-4">
                         <Button className="flex-1" disabled>
-                            <ArrowUpCircle className="mr-2" />
-                            Deposit
-                        </Button>
-                        <Button variant="secondary" className="flex-1" disabled>
                              <ArrowDownCircle className="mr-2" />
-                            Withdraw
+                            Request Withdrawal
                         </Button>
                     </CardContent>
                 </Card>
@@ -54,29 +129,34 @@ export default function WalletPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Transaction History</CardTitle>
-                    <CardDescription>Your recent deposits, withdrawals, and earnings. (Static data for now)</CardDescription>
+                    <CardDescription>Your recent earnings and withdrawals.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Type</TableHead>
+                                <TableHead>Description</TableHead>
                                 <TableHead>Amount</TableHead>
                                 <TableHead>Date</TableHead>
                                 <TableHead>Status</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {transactions.map(t => (
-                                <TableRow key={t.id}>
-                                    <TableCell className="font-medium capitalize">{t.type}</TableCell>
-                                    <TableCell className={t.type === 'withdrawal' ? 'text-destructive' : 'text-green-600'}>
-                                        {t.type === 'withdrawal' ? '-' : '+'}₹{t.amount.toFixed(2)}
+                            {loadingTransactions ? (
+                                <>
+                                    <TransactionSkeleton />
+                                    <TransactionSkeleton />
+                                    <TransactionSkeleton />
+                                </>
+                            ) : transactions.length > 0 ? (
+                                transactions.map(t => <TransactionRow key={t.id} transaction={t} />)
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">
+                                        No transactions yet. Complete an order to see your first earning.
                                     </TableCell>
-                                    <TableCell>{t.date}</TableCell>
-                                    <TableCell>{t.status}</TableCell>
                                 </TableRow>
-                            ))}
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>
