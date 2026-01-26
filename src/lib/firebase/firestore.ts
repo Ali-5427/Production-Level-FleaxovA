@@ -387,7 +387,7 @@ export async function getUser(userId: string): Promise<User | null> {
         return { 
             id: docSnap.id,
              ...data,
-            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
         } as User;
     }
     return null;
@@ -1029,7 +1029,7 @@ export async function getAllUsers(): Promise<User[]> {
         return {
             id: doc.id,
             ...data,
-            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
         } as User;
     });
 }
@@ -1043,7 +1043,7 @@ export function getUsersListener(callback: (users: User[]) => void) {
             return {
                 id: doc.id,
                 ...data,
-                createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
                 paymentDetails: data.paymentDetails ? {
                     ...data.paymentDetails,
                     addedAt: data.paymentDetails.addedAt?.toDate ? data.paymentDetails.addedAt.toDate() : data.paymentDetails.addedAt,
@@ -1126,6 +1126,7 @@ export { db };
     
 
     
+
 
 
 
