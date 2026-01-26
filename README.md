@@ -88,4 +88,4 @@ Fleaxova/
 
 ---
 
-Developed with ❤️ by the Fleaxova Team.
+Developed with ❤️ by ALI.
