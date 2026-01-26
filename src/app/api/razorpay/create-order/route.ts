@@ -3,11 +3,6 @@ import { NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
 import { z } from 'zod';
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
-
 const orderSchema = z.object({
   amount: z.number().positive(),
   currency: z.string().default('INR'),
@@ -16,6 +11,11 @@ const orderSchema = z.object({
 export async function POST(request: Request) {
   let json;
   try {
+    const razorpay = new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID!,
+        key_secret: process.env.RAZORPAY_KEY_SECRET!,
+    });
+      
     json = await request.json();
     const { amount, currency } = orderSchema.parse(json);
 
